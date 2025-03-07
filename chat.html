@@ -5,62 +5,68 @@
     <title>ESP32 Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body {
-            font-family: Arial;
+        .root {
+            flex-direction: column;
+            padding: 1em;
+            background-color: #ecf4f8;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+          }
+          
+          .chat-body {
+            height: 100%;
+            width: 100%;
+            max-height: 800px;
             max-width: 600px;
-            margin: 0 auto;
-            padding: 20px
-        }
-
-        #chat {
-            height: 300px;
-            overflow-y: scroll;
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin-bottom: 10px
-        }
-
-        #messageInput {
-            width: 70%;
-            padding: 10px
-        }
-
-        #sendButton {
-            width: 25%;
-            padding: 10px
-        }
-
-        .message {
-            margin-bottom: 8px;
-            padding: 8px;
-            border-radius: 4px
-        }
-
-        .mine {
-            background-color: #e1f5fe;
-            text-align: right
-        }
-
-        .others {
-            background-color: #f1f1f1
-        }
-
-        .system {
-            background-color: #fffde7;
-            text-align: center;
-            font-style: italic
-        }
-
-        .user-count {
-            text-align: right;
-            font-size: .9em;
-            color: #666;
-            margin-bottom: 10px
-        }
+            background: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0px 0px 10px #9d9d9d;
+          }
+          
+          .chat-header {
+            display: flex;
+            align-items: center;
+            padding: 1em;
+            background-color: #fff;
+            box-shadow: 0 0 1em #00000022;
+          }
     </style>
 </head>
 
 <body>
+
+    <div class="root">
+        <div class="chat-body">
+          <div class="chat-header">
+           
+          </div>
+          <div class="chat-messages">
+            <div class="chat-message">
+              <div class="chat-message-author">Alice</div>
+              <div class="chat-message-content">Hello, Bob!</div>
+            </div>
+            <div class="chat-message">
+              <div class="chat-message-author">Bob</div>
+              <div class="chat-message-content">Hello, Alice!</div>
+            </div>
+          </div>
+          <div class="chat-input">
+            <input type="text" placeholder="Type your message here" />
+            <button>Send</button>
+          </div>
+    
+        </div>
+    
+    
+      </div>
+
+    <!--  
     <h2>ESP32 Chat</h2>
     <div class="user-count"><span id="userCount">1</span> usuários online</div>
     <div id="chat"></div>
@@ -68,7 +74,7 @@
         <input type="text" id="messageInput" placeholder="Digite sua mensagem">
         <button id="sendButton">Enviar</button>
     </div>
-
+  
     <script>
         // Variáveis globais
         const el = {
@@ -298,6 +304,7 @@
         // Iniciar o chat quando o DOM estiver pronto
         document.addEventListener('DOMContentLoaded', initChat);
     </script>
+      -->
 </body>
 
 </html>
