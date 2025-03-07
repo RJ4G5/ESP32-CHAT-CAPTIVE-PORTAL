@@ -42,197 +42,233 @@ CHAT_HTML = """
     </div>
 
 <script>
-// Variáveis globais compactadas
-const el={chat:document.getElementById('chat'),input:document.getElementById('messageInput'),
-btn:document.getElementById('sendButton'),count:document.getElementById('userCount')};
-let history=[], lastId=0, syncDone=false, syncReq=false;
+// Variáveis globais
+const el = {
+    chat: document.getElementById('chat'),
+    input: document.getElementById('messageInput'),
+    btn: document.getElementById('sendButton'),
+    count: document.getElementById('userCount')
+};
 
-// Detectar dispositivo e criar username
-function getDevice(){
-    const ua=navigator.userAgent;
-    if(/iPhone/.test(ua)) return 'iPhone';
-    if(/iPad/.test(ua)) return 'iPad';
-    if(/Android/.test(ua)){
-        const m=ua.match(/Android.*?; (.*?) Build/);
+// Verificar se todos os elementos existem
+if (!el.chat || !el.input || !el.btn || !el.count) {
+    console.error("Alguns elementos não foram encontrados na página");
+}
+
+let history = [], lastId = 0;
+
+// Detectar dispositivo
+function getDevice() {
+    const ua = navigator.userAgent;
+    if (/iPhone/.test(ua)) return 'iPhone';
+    if (/iPad/.test(ua)) return 'iPad';
+    if (/Android/.test(ua)) {
+        const m = ua.match(/Android.*?; (.*?) Build/);
         return m && m[1] ? m[1].trim() : 'Android';
     }
-    if(/Windows/.test(ua)) return 'Windows';
-    if(/Mac/.test(ua)) return 'Mac';
-    if(/Linux/.test(ua)) return 'Linux';
+    if (/Windows/.test(ua)) return 'Windows';
+    if (/Mac/.test(ua)) return 'Mac';
+    if (/Linux/.test(ua)) return 'Linux';
     return 'Unknown';
 }
 
-// Gerar ID e nome
-const rnd=Math.floor(Math.random()*10000);
-const device=getDevice();
-const username=device+'_'+rnd;
-const clientId=Date.now()+Math.floor(Math.random()*1000);
+// Gerar ID único para cada cliente
+const rnd = Math.floor(Math.random() * 10000);
+const device = getDevice();
+const username = device + '_' + rnd;
+const clientId = Date.now() + Math.floor(Math.random() * 1000);
 
-// Obter data/hora
-function getTime(){
-    const d=new Date();
+// Função para obter horário formatado
+function getTime() {
+    const d = new Date();
     return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-// WebSocket
-const ws=new WebSocket('ws://'+window.location.hostname+':81/ws');
+// Verificação de conexão WebSocket
+function createWebSocketConnection() {
+    try {
+        // Criar conexão WebSocket com verificação de protocolo
+        const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        const ws = new WebSocket(protocol + window.location.hostname + ':81/ws');
+        
+        // Quando conectar ao servidor
+        ws.onopen = function () {
+            addMsg("Conectado ao chat!", "system");
 
-// Conectar
-ws.onopen=function(){
-    addMsg("Conectado ao chat!", "system");
-    
-    // Identificar
-    ws.send(JSON.stringify({
-        type:'identify',
-        username:username,
-        clientId:clientId
-    }));
-    
-    // Pedir histórico após delay
-    setTimeout(()=>{
-        if(!syncReq) requestSync();
-    }, 1000);
-};
+            // Identificar o usuário
+            ws.send(JSON.stringify({
+                type: 'identify',
+                username: username,
+                clientId: clientId
+            }));
 
-// Solicitar histórico
-function requestSync(){
-    syncReq=true;
-    ws.send(JSON.stringify({
-        type:'syncRequest',
-        username:username,
-        clientId:clientId
-    }));
+            // Solicitar histórico após um pequeno delay
+            setTimeout(() => {
+                requestSync(ws);
+            }, 1000);
+        };
+
+        // Receber mensagens do WebSocket
+        ws.onmessage = function (e) {
+            try {
+                const data = JSON.parse(e.data);
+
+                if (data.type === 'message') {
+                    const exists = history.some(m => m.id === data.id && m.usuario === data.sender);
+                    if (!exists) {
+                        addMsg(data.sender + ": " + data.content, data.senderId === clientId ? "mine" : "others");
+                        history.push({
+                            id: data.id || ++lastId,
+                            data: data.timestamp || getTime(),
+                            usuario: data.sender,
+                            mensagem: data.content
+                        });
+                    }
+                }
+                else if (data.type === 'identify') {
+                    addMsg(`${data.username || 'Novo usuário'} se conectou`, "system");
+                }
+                else if (data.type === 'userCount') {
+                    el.count.textContent = data.count;
+                }
+                else if (data.type === 'syncRequest' && !data.targetClientId) {
+                    // Cliente com mais mensagens responde
+                    if (history.length > data.messageCount) {
+                        ws.send(JSON.stringify({
+                            type: 'syncResponse',
+                            targetClientId: data.clientId,
+                            history: history,
+                            sender: username,
+                            senderId: clientId
+                        }));
+                    }
+                }
+                else if (data.type === 'syncResponse' && data.targetClientId === clientId) {
+                    if (data.history && data.history.length > 0) {
+                        if (history.length === 0) el.chat.innerHTML = '';
+
+                        data.history.forEach(msg => {
+                            const exists = history.some(m => m.id === msg.id && m.usuario === msg.usuario);
+                            if (!exists) {
+                                const type = msg.usuario === username ? "mine" : "others";
+                                addMsg(`${msg.usuario}: ${msg.mensagem}`, type);
+                                if (msg.id > lastId) lastId = msg.id;
+                                history.push(msg);
+                            }
+                        });
+
+                        addMsg("Histórico sincronizado!", "system");
+                    }
+                }
+            } catch (error) {
+                console.error("Erro ao processar mensagem:", error);
+                addMsg("Erro ao processar mensagem", "system");
+            }
+        };
+
+        // Quando desconectar do servidor
+        ws.onclose = function (event) {
+            addMsg(`Desconectado do servidor (código: ${event.code})!`, "system");
+            
+            // Tentar reconectar após 5 segundos
+            setTimeout(() => {
+                addMsg("Tentando reconectar...", "system");
+                initChat();
+            }, 5000);
+        };
+
+        // Tratar erros de conexão
+        ws.onerror = function (error) {
+            console.error("Erro de WebSocket:", error);
+            addMsg("Erro de conexão", "system");
+        };
+
+        return ws;
+    } catch (error) {
+        console.error("Falha ao criar conexão WebSocket:", error);
+        addMsg("Falha ao conectar. Tente novamente mais tarde.", "system");
+        return null;
+    }
 }
 
-// Receber mensagens
-ws.onmessage=function(e){
-    try{
-        const data=JSON.parse(e.data);
-        
-        // Tipo de mensagem
-        if(data.type==='message'){
-            // Verificar duplicação
-            const exists=history.some(m=>m.id===data.id && m.usuario===data.sender);
-            
-            if(!exists){
-                addMsg(data.sender+": "+data.content, data.senderId===clientId?"mine":"others");
-                
-                // Guardar no histórico
-                history.push({
-                    id:data.id || ++lastId,
-                    data:data.timestamp || getTime(),
-                    usuario:data.sender,
-                    mensagem:data.content
-                });
-            }
-        }
-        else if(data.type==='connect'){
-            // Notificação de conexão
-            addMsg(`${data.username || 'Novo usuário'} se conectou`, "system");
-        }
-        else if(data.type==='userCount'){
-            // Atualizar contador
-            el.count.textContent=data.count;
-        }
-        else if(data.type==='syncRequest' && !data.targetClientId){
-            // Pedido de sincronização - responder com probabilidade de 30%
-            if(Math.random()<0.3 && history.length>0){
-                ws.send(JSON.stringify({
-                    type:'syncResponse',
-                    targetClientId:data.clientId,
-                    history:history,
-                    sender:username,
-                    senderId:clientId
-                }));
-            }
-        }
-        else if(data.type==='syncResponse' && data.targetClientId===clientId){
-            // Recebendo histórico
-            if(!syncDone && data.history && data.history.length>0){
-                // Limpar chat se vazio
-                if(history.length===0) el.chat.innerHTML='';
-                
-                // Processar histórico
-                data.history.forEach(msg=>{
-                    const exists=history.some(m=>m.id===msg.id && m.usuario===msg.usuario);
-                    
-                    if(!exists){
-                        const type=msg.usuario===username?"mine":"others";
-                        addMsg(`${msg.usuario}: ${msg.mensagem}`, type);
-                        
-                        if(msg.id>lastId) lastId=msg.id;
-                        history.push(msg);
-                    }
-                });
-                
-                // Ordenar por data
-                history.sort((a,b)=>{
-                    return new Date(a.data.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')) - 
-                           new Date(b.data.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1'));
-                });
-                
-                syncDone=true;
-                addMsg("Histórico sincronizado!", "system");
-            }
-        }
-    }catch(e){
-        addMsg(e.data, "system");
+// Solicitar sincronização de histórico
+function requestSync(ws) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            type: 'syncRequest',
+            username: username,
+            clientId: clientId,
+            messageCount: history.length // Enviar a quantidade de mensagens armazenadas
+        }));
+    } else {
+        console.warn("WebSocket não está aberto para solicitar sincronização");
     }
-};
+}
 
-// Desconectar
-ws.onclose=function(){
-    addMsg("Desconectado do servidor!", "system");
-};
-
-// Adicionar mensagem
-function addMsg(msg, type){
-    const div=document.createElement('div');
-    div.textContent=msg;
-    div.className='message '+type;
+// Função para adicionar mensagens ao chat
+function addMsg(msg, type) {
+    if (!el.chat) return;
+    
+    const div = document.createElement('div');
+    div.textContent = msg;
+    div.className = 'message ' + type;
     el.chat.appendChild(div);
-    el.chat.scrollTop=el.chat.scrollHeight;
+    el.chat.scrollTop = el.chat.scrollHeight;
 }
 
 // Enviar mensagem
-function sendMessage(){
-    const msg=el.input.value.trim();
-    if(msg){
-        // Gerar ID e timestamp
-        const msgId=++lastId;
-        const time=getTime();
-        
-        // Enviar
+function sendMessage(ws) {
+    if (!el.input) return;
+    
+    const msg = el.input.value.trim();
+    if (msg && ws && ws.readyState === WebSocket.OPEN) {
+        const msgId = ++lastId;
+        const time = getTime();
+
         ws.send(JSON.stringify({
-            type:'message',
-            sender:username,
-            content:msg,
-            senderId:clientId,
-            id:msgId,
-            timestamp:time
+            type: 'message',
+            sender: username,
+            content: msg,
+            senderId: clientId,
+            id: msgId,
+            timestamp: time
         }));
-        
-        // Mostrar localmente
-        addMsg(username+": "+msg, "mine");
-        
-        // Guardar no histórico
+
+        addMsg(username + ": " + msg, "mine");
+
         history.push({
-            id:msgId,
-            data:time,
-            usuario:username,
-            mensagem:msg
+            id: msgId,
+            data: time,
+            usuario: username,
+            mensagem: msg
         });
-        
-        // Limpar input
-        el.input.value='';
+
+        el.input.value = '';
+    } else if (ws && ws.readyState !== WebSocket.OPEN) {
+        addMsg("Você está desconectado. Aguarde reconexão...", "system");
     }
 }
 
-// Listeners
-el.btn.onclick=sendMessage;
-el.input.addEventListener('keypress',function(e){
-    if(e.key==='Enter') sendMessage();
-});
+// Inicialização
+function initChat() {
+    const ws = createWebSocketConnection();
+    
+    if (ws) {
+        // Configurar eventos
+        if (el.btn) {
+            el.btn.onclick = () => sendMessage(ws);
+        }
+        
+        if (el.input) {
+            el.input.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') sendMessage(ws);
+            });
+        }
+    }
+}
+
+// Iniciar o chat quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', initChat);
 </script>
 </body>
 </html>
@@ -339,6 +375,7 @@ class WebServer:
     # Modificação para enviar HTML grande em partes
     async def handle_http_request(self, client, addr):
         try:
+            client.settimeout(2)  # Timeout de 2 segundos
             client.setblocking(False)
             data = b''
             
@@ -394,8 +431,14 @@ class WebServer:
             
             client.close()
         
-        except Exception as e:
-            print(f"Erro HTTP: {e}")
+        except OSError as e:
+            if e.errno == 104:  # ECONNRESET
+                print(f"Conexão redefinida de {addr}")
+            elif e.errno == 11:  # EAGAIN
+                print("Recurso temporariamente indisponível")
+            else:
+                print(f"Erro de conexão: {e}")
+        finally:
             try:
                 client.close()
             except:
