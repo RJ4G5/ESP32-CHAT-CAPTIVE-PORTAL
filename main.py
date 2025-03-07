@@ -13,21 +13,23 @@ AP_IP = '192.168.4.1'
 MAX_CONNECTIONS = 5  # Limite máximo de conexões WebSocket simultâneas
 
 # HTML da página de chat
-CHAT_HTML = """<!DOCTYPE html>
+CHAT_HTML = """
+
+<!DOCTYPE html>
 <html>
 <head>
     <title>ESP32 Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: Arial; max-width: 600px; margin: 0 auto; padding: 20px; }
-        #chat { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-        #messageInput { width: 70%; padding: 10px; }
-        #sendButton { width: 25%; padding: 10px; }
-        .message { margin-bottom: 8px; padding: 8px; border-radius: 4px; }
-        .mine { background-color: #e1f5fe; text-align: right; }
-        .others { background-color: #f1f1f1; }
-        .system { background-color: #fffde7; text-align: center; font-style: italic; }
-        .user-count { text-align: right; font-size: 0.9em; color: #666; margin-bottom: 10px; }
+        body{font-family:Arial;max-width:600px;margin:0 auto;padding:20px}
+        #chat{height:300px;overflow-y:scroll;border:1px solid #ccc;padding:10px;margin-bottom:10px}
+        #messageInput{width:70%;padding:10px}
+        #sendButton{width:25%;padding:10px}
+        .message{margin-bottom:8px;padding:8px;border-radius:4px}
+        .mine{background-color:#e1f5fe;text-align:right}
+        .others{background-color:#f1f1f1}
+        .system{background-color:#fffde7;text-align:center;font-style:italic}
+        .user-count{text-align:right;font-size:.9em;color:#666;margin-bottom:10px}
     </style>
 </head>
 <body>
@@ -38,100 +40,200 @@ CHAT_HTML = """<!DOCTYPE html>
         <input type="text" id="messageInput" placeholder="Digite sua mensagem">
         <button id="sendButton">Enviar</button>
     </div>
-    <script>
-        const chatDiv = document.getElementById('chat');
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const userCountElement = document.getElementById('userCount');
-        
-        // Detectar informações do dispositivo
-        function getDeviceInfo() {
-            const ua = navigator.userAgent;
-            let deviceModel = 'Desconhecido';
-            
-            // Tentar extrair modelo do dispositivo
-            if (/iPhone/.test(ua)) {
-                deviceModel = 'iPhone';
-            } else if (/iPad/.test(ua)) {
-                deviceModel = 'iPad';
-            } else if (/Android/.test(ua)) {
-                const match = ua.match(/Android.*?; (.*?) Build/);
-                if (match && match[1]) {
-                    deviceModel = match[1].trim();
-                } else {
-                    deviceModel = 'Android';
-                }
-            } else if (/Windows/.test(ua)) {
-                deviceModel = 'Windows';
-            } else if (/Macintosh/.test(ua)) {
-                deviceModel = 'Mac';
-            } else if (/Linux/.test(ua)) {
-                deviceModel = 'Linux';
-            }
-            
-            return deviceModel;
-        }
-        
-        const randomId = Math.floor(Math.random() * 10000);
-        const deviceModel = getDeviceInfo();
-        const username = deviceModel + '_' + randomId;
-        const clientId = Date.now() + Math.floor(Math.random() * 1000);
-        
-        const ws = new WebSocket('ws://' + window.location.hostname + ':81/ws');
-        
-        ws.onopen = function() {
-            addMessage("Conectado ao chat!", "system");
-        };
-        
-        ws.onmessage = function(event) {
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === 'message') {
-                    addMessage(data.sender + ": " + data.content, 
-                              data.senderId === clientId ? "mine" : "others");
-                } else if (data.type === 'userCount') {
-                    userCountElement.textContent = data.count;
-                }
-            } catch (e) {
-                addMessage(event.data, "system");
-            }
-        };
-        
-        ws.onclose = function() {
-            addMessage("Desconectado do servidor!", "system");
-        };
-        
-        function addMessage(msg, type) {
-            const messageElement = document.createElement('div');
-            messageElement.textContent = msg;
-            messageElement.className = 'message ' + type;
-            chatDiv.appendChild(messageElement);
-            chatDiv.scrollTop = chatDiv.scrollHeight;
-        }
 
-        sendButton.onclick = sendMessage;
+<script>
+// Variáveis globais compactadas
+const el={chat:document.getElementById('chat'),input:document.getElementById('messageInput'),
+btn:document.getElementById('sendButton'),count:document.getElementById('userCount')};
+let history=[], lastId=0, syncDone=false, syncReq=false;
+
+// Detectar dispositivo e criar username
+function getDevice(){
+    const ua=navigator.userAgent;
+    if(/iPhone/.test(ua)) return 'iPhone';
+    if(/iPad/.test(ua)) return 'iPad';
+    if(/Android/.test(ua)){
+        const m=ua.match(/Android.*?; (.*?) Build/);
+        return m && m[1] ? m[1].trim() : 'Android';
+    }
+    if(/Windows/.test(ua)) return 'Windows';
+    if(/Mac/.test(ua)) return 'Mac';
+    if(/Linux/.test(ua)) return 'Linux';
+    return 'Unknown';
+}
+
+// Gerar ID e nome
+const rnd=Math.floor(Math.random()*10000);
+const device=getDevice();
+const username=device+'_'+rnd;
+const clientId=Date.now()+Math.floor(Math.random()*1000);
+
+// Obter data/hora
+function getTime(){
+    const d=new Date();
+    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// WebSocket
+const ws=new WebSocket('ws://'+window.location.hostname+':81/ws');
+
+// Conectar
+ws.onopen=function(){
+    addMsg("Conectado ao chat!", "system");
+    
+    // Identificar
+    ws.send(JSON.stringify({
+        type:'identify',
+        username:username,
+        clientId:clientId
+    }));
+    
+    // Pedir histórico após delay
+    setTimeout(()=>{
+        if(!syncReq) requestSync();
+    }, 1000);
+};
+
+// Solicitar histórico
+function requestSync(){
+    syncReq=true;
+    ws.send(JSON.stringify({
+        type:'syncRequest',
+        username:username,
+        clientId:clientId
+    }));
+}
+
+// Receber mensagens
+ws.onmessage=function(e){
+    try{
+        const data=JSON.parse(e.data);
         
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            if (message) {
-                const data = {
-                    type: 'message',
-                    sender: username,
-                    content: message,
-                    senderId: clientId
-                };
-                ws.send(JSON.stringify(data));
-                addMessage(username + ": " + message, "mine");
-                messageInput.value = '';
+        // Tipo de mensagem
+        if(data.type==='message'){
+            // Verificar duplicação
+            const exists=history.some(m=>m.id===data.id && m.usuario===data.sender);
+            
+            if(!exists){
+                addMsg(data.sender+": "+data.content, data.senderId===clientId?"mine":"others");
+                
+                // Guardar no histórico
+                history.push({
+                    id:data.id || ++lastId,
+                    data:data.timestamp || getTime(),
+                    usuario:data.sender,
+                    mensagem:data.content
+                });
             }
         }
-
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
+        else if(data.type==='connect'){
+            // Notificação de conexão
+            addMsg(`${data.username || 'Novo usuário'} se conectou`, "system");
+        }
+        else if(data.type==='userCount'){
+            // Atualizar contador
+            el.count.textContent=data.count;
+        }
+        else if(data.type==='syncRequest' && !data.targetClientId){
+            // Pedido de sincronização - responder com probabilidade de 30%
+            if(Math.random()<0.3 && history.length>0){
+                ws.send(JSON.stringify({
+                    type:'syncResponse',
+                    targetClientId:data.clientId,
+                    history:history,
+                    sender:username,
+                    senderId:clientId
+                }));
             }
+        }
+        else if(data.type==='syncResponse' && data.targetClientId===clientId){
+            // Recebendo histórico
+            if(!syncDone && data.history && data.history.length>0){
+                // Limpar chat se vazio
+                if(history.length===0) el.chat.innerHTML='';
+                
+                // Processar histórico
+                data.history.forEach(msg=>{
+                    const exists=history.some(m=>m.id===msg.id && m.usuario===msg.usuario);
+                    
+                    if(!exists){
+                        const type=msg.usuario===username?"mine":"others";
+                        addMsg(`${msg.usuario}: ${msg.mensagem}`, type);
+                        
+                        if(msg.id>lastId) lastId=msg.id;
+                        history.push(msg);
+                    }
+                });
+                
+                // Ordenar por data
+                history.sort((a,b)=>{
+                    return new Date(a.data.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')) - 
+                           new Date(b.data.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1'));
+                });
+                
+                syncDone=true;
+                addMsg("Histórico sincronizado!", "system");
+            }
+        }
+    }catch(e){
+        addMsg(e.data, "system");
+    }
+};
+
+// Desconectar
+ws.onclose=function(){
+    addMsg("Desconectado do servidor!", "system");
+};
+
+// Adicionar mensagem
+function addMsg(msg, type){
+    const div=document.createElement('div');
+    div.textContent=msg;
+    div.className='message '+type;
+    el.chat.appendChild(div);
+    el.chat.scrollTop=el.chat.scrollHeight;
+}
+
+// Enviar mensagem
+function sendMessage(){
+    const msg=el.input.value.trim();
+    if(msg){
+        // Gerar ID e timestamp
+        const msgId=++lastId;
+        const time=getTime();
+        
+        // Enviar
+        ws.send(JSON.stringify({
+            type:'message',
+            sender:username,
+            content:msg,
+            senderId:clientId,
+            id:msgId,
+            timestamp:time
+        }));
+        
+        // Mostrar localmente
+        addMsg(username+": "+msg, "mine");
+        
+        // Guardar no histórico
+        history.push({
+            id:msgId,
+            data:time,
+            usuario:username,
+            mensagem:msg
         });
-    </script>
+        
+        // Limpar input
+        el.input.value='';
+    }
+}
+
+// Listeners
+el.btn.onclick=sendMessage;
+el.input.addEventListener('keypress',function(e){
+    if(e.key==='Enter') sendMessage();
+});
+</script>
 </body>
 </html>
 """
@@ -234,6 +336,7 @@ class WebServer:
         self.socket.setblocking(False)
         print(f'Servidor HTTP iniciado na porta {self.port}')
     
+    # Modificação para enviar HTML grande em partes
     async def handle_http_request(self, client, addr):
         try:
             client.setblocking(False)
@@ -269,15 +372,25 @@ class WebServer:
             # Verificar se atingiu o limite de conexões para o WebSocket
             if self.websocket_server and len(self.websocket_server.clients) >= MAX_CONNECTIONS:
                 # Se estiver no limite, forneça a página de limite excedido
-                client.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n' + LIMIT_EXCEEDED_HTML.encode())
+                client.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
+                client.send(LIMIT_EXCEEDED_HTML.encode())
             else:
                 # Caso contrário, processe normalmente
                 if 'generate_204' in path or 'connecttest.txt' in path or 'redirect' in path:
                     # Requisições específicas para detecção de captive portal
                     client.send(b'HTTP/1.1 302 Found\r\nLocation: http://' + AP_IP.encode() + b'\r\n\r\n')
                 else:
-                    # Página principal
-                    client.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n' + CHAT_HTML.encode())
+                    # Página principal - enviando em partes
+                    client.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
+                    
+                    # Dividir o HTML em pedaços de 2048 bytes e enviar cada um
+                    html_bytes = CHAT_HTML.encode()
+                    chunk_size = 2048
+                    
+                    for i in range(0, len(html_bytes), chunk_size):
+                        chunk = html_bytes[i:i + chunk_size]
+                        client.send(chunk)
+                        await asyncio.sleep(0.01)  # Pequena pausa para processamento
             
             client.close()
         
@@ -589,3 +702,4 @@ if __name__ == "__main__":
         import machine
         time.sleep(5)
         machine.reset()
+
