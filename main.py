@@ -12,267 +12,8 @@ AP_PASSWORD = '12345678'
 AP_IP = '192.168.4.1'
 MAX_CONNECTIONS = 5  # Limite máximo de conexões WebSocket simultâneas
 
-# HTML da página de chat
-CHAT_HTML = """
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>ESP32 Chat</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body{font-family:Arial;max-width:600px;margin:0 auto;padding:20px}
-        #chat{height:300px;overflow-y:scroll;border:1px solid #ccc;padding:10px;margin-bottom:10px}
-        #messageInput{width:70%;padding:10px}
-        #sendButton{width:25%;padding:10px}
-        .message{margin-bottom:8px;padding:8px;border-radius:4px}
-        .mine{background-color:#e1f5fe;text-align:right}
-        .others{background-color:#f1f1f1}
-        .system{background-color:#fffde7;text-align:center;font-style:italic}
-        .user-count{text-align:right;font-size:.9em;color:#666;margin-bottom:10px}
-    </style>
-</head>
-<body>
-    <h2>ESP32 Chat</h2>
-    <div class="user-count"><span id="userCount">1</span> usuários online</div>
-    <div id="chat"></div>
-    <div>
-        <input type="text" id="messageInput" placeholder="Digite sua mensagem">
-        <button id="sendButton">Enviar</button>
-    </div>
 
-<script>
-// Variáveis globais
-const el = {
-    chat: document.getElementById('chat'),
-    input: document.getElementById('messageInput'),
-    btn: document.getElementById('sendButton'),
-    count: document.getElementById('userCount')
-};
-
-// Verificar se todos os elementos existem
-if (!el.chat || !el.input || !el.btn || !el.count) {
-    console.error("Alguns elementos não foram encontrados na página");
-}
-
-let history = [], lastId = 0;
-
-// Detectar dispositivo
-function getDevice() {
-    const ua = navigator.userAgent;
-    if (/iPhone/.test(ua)) return 'iPhone';
-    if (/iPad/.test(ua)) return 'iPad';
-    if (/Android/.test(ua)) {
-        const m = ua.match(/Android.*?; (.*?) Build/);
-        return m && m[1] ? m[1].trim() : 'Android';
-    }
-    if (/Windows/.test(ua)) return 'Windows';
-    if (/Mac/.test(ua)) return 'Mac';
-    if (/Linux/.test(ua)) return 'Linux';
-    return 'Unknown';
-}
-
-// Gerar ID único para cada cliente
-const rnd = Math.floor(Math.random() * 10000);
-const device = getDevice();
-const username = device + '_' + rnd;
-const clientId = Date.now() + Math.floor(Math.random() * 1000);
-
-// Função para obter horário formatado
-function getTime() {
-    const d = new Date();
-    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-}
-
-// Verificação de conexão WebSocket
-function createWebSocketConnection() {
-    try {
-        // Criar conexão WebSocket com verificação de protocolo
-        const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        const ws = new WebSocket(protocol + window.location.hostname + ':81/ws');
-        
-        // Quando conectar ao servidor
-        ws.onopen = function () {
-            addMsg("Conectado ao chat!", "system");
-
-            // Identificar o usuário
-            ws.send(JSON.stringify({
-                type: 'identify',
-                username: username,
-                clientId: clientId
-            }));
-
-            // Solicitar histórico após um pequeno delay
-            setTimeout(() => {
-                requestSync(ws);
-            }, 1000);
-        };
-
-        // Receber mensagens do WebSocket
-        ws.onmessage = function (e) {
-            try {
-                const data = JSON.parse(e.data);
-
-                if (data.type === 'message') {
-                    const exists = history.some(m => m.id === data.id && m.usuario === data.sender);
-                    if (!exists) {
-                        addMsg(data.sender + ": " + data.content, data.senderId === clientId ? "mine" : "others");
-                        history.push({
-                            id: data.id || ++lastId,
-                            data: data.timestamp || getTime(),
-                            usuario: data.sender,
-                            mensagem: data.content
-                        });
-                    }
-                }
-                else if (data.type === 'identify') {
-                    addMsg(`${data.username || 'Novo usuário'} se conectou`, "system");
-                }
-                else if (data.type === 'userCount') {
-                    el.count.textContent = data.count;
-                }
-                else if (data.type === 'syncRequest' && !data.targetClientId) {
-                    // Cliente com mais mensagens responde
-                    if (history.length > data.messageCount) {
-                        ws.send(JSON.stringify({
-                            type: 'syncResponse',
-                            targetClientId: data.clientId,
-                            history: history,
-                            sender: username,
-                            senderId: clientId
-                        }));
-                    }
-                }
-                else if (data.type === 'syncResponse' && data.targetClientId === clientId) {
-                    if (data.history && data.history.length > 0) {
-                        if (history.length === 0) el.chat.innerHTML = '';
-
-                        data.history.forEach(msg => {
-                            const exists = history.some(m => m.id === msg.id && m.usuario === msg.usuario);
-                            if (!exists) {
-                                const type = msg.usuario === username ? "mine" : "others";
-                                addMsg(`${msg.usuario}: ${msg.mensagem}`, type);
-                                if (msg.id > lastId) lastId = msg.id;
-                                history.push(msg);
-                            }
-                        });
-
-                        addMsg("Histórico sincronizado!", "system");
-                    }
-                }
-            } catch (error) {
-                console.error("Erro ao processar mensagem:", error);
-                addMsg("Erro ao processar mensagem", "system");
-            }
-        };
-
-        // Quando desconectar do servidor
-        ws.onclose = function (event) {
-            addMsg(`Desconectado do servidor (código: ${event.code})!`, "system");
-            
-            // Tentar reconectar após 5 segundos
-            setTimeout(() => {
-                addMsg("Tentando reconectar...", "system");
-                initChat();
-            }, 5000);
-        };
-
-        // Tratar erros de conexão
-        ws.onerror = function (error) {
-            console.error("Erro de WebSocket:", error);
-            addMsg("Erro de conexão", "system");
-        };
-
-        return ws;
-    } catch (error) {
-        console.error("Falha ao criar conexão WebSocket:", error);
-        addMsg("Falha ao conectar. Tente novamente mais tarde.", "system");
-        return null;
-    }
-}
-
-// Solicitar sincronização de histórico
-function requestSync(ws) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-            type: 'syncRequest',
-            username: username,
-            clientId: clientId,
-            messageCount: history.length // Enviar a quantidade de mensagens armazenadas
-        }));
-    } else {
-        console.warn("WebSocket não está aberto para solicitar sincronização");
-    }
-}
-
-// Função para adicionar mensagens ao chat
-function addMsg(msg, type) {
-    if (!el.chat) return;
-    
-    const div = document.createElement('div');
-    div.textContent = msg;
-    div.className = 'message ' + type;
-    el.chat.appendChild(div);
-    el.chat.scrollTop = el.chat.scrollHeight;
-}
-
-// Enviar mensagem
-function sendMessage(ws) {
-    if (!el.input) return;
-    
-    const msg = el.input.value.trim();
-    if (msg && ws && ws.readyState === WebSocket.OPEN) {
-        const msgId = ++lastId;
-        const time = getTime();
-
-        ws.send(JSON.stringify({
-            type: 'message',
-            sender: username,
-            content: msg,
-            senderId: clientId,
-            id: msgId,
-            timestamp: time
-        }));
-
-        addMsg(username + ": " + msg, "mine");
-
-        history.push({
-            id: msgId,
-            data: time,
-            usuario: username,
-            mensagem: msg
-        });
-
-        el.input.value = '';
-    } else if (ws && ws.readyState !== WebSocket.OPEN) {
-        addMsg("Você está desconectado. Aguarde reconexão...", "system");
-    }
-}
-
-// Inicialização
-function initChat() {
-    const ws = createWebSocketConnection();
-    
-    if (ws) {
-        // Configurar eventos
-        if (el.btn) {
-            el.btn.onclick = () => sendMessage(ws);
-        }
-        
-        if (el.input) {
-            el.input.addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') sendMessage(ws);
-            });
-        }
-    }
-}
-
-// Iniciar o chat quando o DOM estiver pronto
-document.addEventListener('DOMContentLoaded', initChat);
-</script>
-</body>
-</html>
-"""
 
 # HTML da página de limite excedido
 LIMIT_EXCEEDED_HTML = """<!DOCTYPE html>
@@ -417,17 +158,22 @@ class WebServer:
                     # Requisições específicas para detecção de captive portal
                     client.send(b'HTTP/1.1 302 Found\r\nLocation: http://' + AP_IP.encode() + b'\r\n\r\n')
                 else:
-                    # Página principal - enviando em partes
+                    # Enviar cabeçalho HTTP
                     client.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
                     
-                    # Dividir o HTML em pedaços de 2048 bytes e enviar cada um
-                    html_bytes = CHAT_HTML.encode()
-                    chunk_size = 2048
-                    
-                    for i in range(0, len(html_bytes), chunk_size):
-                        chunk = html_bytes[i:i + chunk_size]
-                        client.send(chunk)
-                        await asyncio.sleep(0.01)  # Pequena pausa para processamento
+                    # Ler e enviar o arquivo HTML em chunks
+                    try:
+                        with open('chat.html', 'r') as file:
+                            while True:
+                                chunk = file.read(2048)
+                                if not chunk:
+                                    break
+                                client.send(chunk.encode())
+                                await asyncio.sleep(0.01)  # Pequena pausa para processamento
+                    except OSError as e:
+                        print(f"Erro ao ler arquivo HTML: {e}")
+                        # Se não conseguir ler o arquivo, envia uma mensagem de erro
+                        client.send(b'Erro ao carregar o arquivo HTML')
             
             client.close()
         
@@ -745,4 +491,5 @@ if __name__ == "__main__":
         import machine
         time.sleep(5)
         machine.reset()
+
 
