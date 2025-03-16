@@ -47,6 +47,51 @@ LIMIT_EXCEEDED_HTML = """<!DOCTYPE html>
 </body>
 </html>
 """ % MAX_CONNECTIONS
+async def split_html_file(input_file, output_dir, num_fragments):
+    """
+    Divide um arquivo HTML em múltiplos fragmentos para MicroPython
+    
+    Args:
+        input_file: Caminho para o arquivo HTML original
+        output_dir: Diretório onde os fragmentos serão salvos
+        num_fragments: Número de fragmentos a serem criados
+    """
+    import os
+    
+    # Verificar se o diretório existe e criar se necessário
+    try:
+        os.stat(output_dir)
+    except OSError:
+        os.mkdir(output_dir)
+    
+    # Ler arquivo HTML
+    with open(input_file, 'r') as f:
+        content = f.read()
+    
+    # Calcular tamanho de cada fragmento
+    content_length = len(content)
+    fragment_size = content_length // num_fragments
+    print(f"Dividido arquivo html em {num_fragments} fragmentos")
+    # Criar fragmentos
+    for i in range(num_fragments):
+        start = i * fragment_size
+        end = (i + 1) * fragment_size if i < num_fragments - 1 else content_length
+        
+        fragment = content[start:end]
+        
+        # Caminho do fragmento
+        fragment_path = output_dir + "/fragment_" + str(i) + ".html"
+        
+        # Salvar fragmento
+        with open(fragment_path, 'w') as f:
+            f.write(fragment)
+        
+        # Adicionar atraso depois de cada fragmento
+        await asyncio.sleep(0.05)  # Atraso de 50ms
+    
+    print(f"Arquivo HTML dividido em {num_fragments} fragmentos.")
+
+
 
 class DNSServer:
     def __init__(self, ip):
@@ -161,19 +206,42 @@ class WebServer:
                     # Enviar cabeçalho HTTP
                     client.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
                     
-                    # Ler e enviar o arquivo HTML em chunks
+                     # Determinar o arquivo a ser servido
+                    if path == '/' or path == '/index.html':
+                        # Servir o carregador inicial leve
+                        file_path = 'loader.html'
+                    elif path.startswith('/fragments/'):
+                        # Servir fragmentos HTML
+                        file_name = path.split('/')[-1]
+                        file_path = 'fragments/' + file_name
+                    else:
+                        # Outros recursos estáticos
+                        if path.startswith('/'):
+                            file_path = path[1:]  # Remover a barra inicial
+                        else:
+                            file_path = path                  
+                   
+                    
+                    # Ler e enviar o arquivo em chunks
                     try:
-                        with open('chat.html', 'r') as file:
+                        with open(file_path, 'r') as file:
                             while True:
-                                chunk = file.read(2048)
-                                if not chunk:
-                                    break
-                                client.send(chunk.encode())
-                                await asyncio.sleep(0.01)  # Pequena pausa para processamento
+                                try:
+                                    chunk = file.read(2048)
+                                    if not chunk:
+                                        break
+                                    client.send(chunk.encode())
+                                    await asyncio.sleep(0.01)
+                                except OSError as e:
+                                    if e.errno == 11:  # EAGAIN
+                                        await asyncio.sleep(0.05)  # Espera um pouco mais
+                                        continue
+                                    raise
                     except OSError as e:
-                        print(f"Erro ao ler arquivo HTML: {e}")
-                        # Se não conseguir ler o arquivo, envia uma mensagem de erro
-                        client.send(b'Erro ao carregar o arquivo HTML')
+                        print(f"Erro ao ler arquivo {file_path}: {e}")
+                        if e.args[0] != 11:  # Não exibir erro EAGAIN
+                            error_msg = 'Erro ao carregar o arquivo: ' + str(e)
+                            client.send(error_msg.encode())
             
             client.close()
         
@@ -473,7 +541,7 @@ async def main():
     dns_server = DNSServer(AP_IP)
     websocket_server = WebSocketServer(81)
     web_server = WebServer(80, websocket_server)  # Passando referência do WebSocket server
-    
+    await split_html_file('chat.html', 'fragments', 5)
     # Executar servidores em tarefas paralelas
     await asyncio.gather(
         dns_server.run(),

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <title>ESP32 Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-weight: bold;
+        }
+
+        .progress {
+            width: 80%;
+            height: 20px;
+            background-color: #ddd;
+            border-radius: 10px;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="loading">Carregando aplicação...</div>
+        <div class="progress">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração
+        const totalFragments = 5; // Número total de fragmentos
+        let loadedFragments = 0;
+        let fragmentsContent = [];
+
+        // Inicializar o array de fragmentos
+        for (let i = 0; i < totalFragments; i++) {
+            fragmentsContent[i] = '';
+        }
+
+        // Função para atualizar a barra de progresso
+        function updateProgress() {
+            const progress = (loadedFragments / totalFragments) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+        }
+
+        // Função assíncrona para carregar um fragmento específico
+        async function loadFragment(index) {
+            try {
+                const response = await fetch('/fragments/fragment_' + index + '.html');
+
+                if (!response.ok) {
+                    throw new Error('Erro ao carregar fragmento ' + index + ': ' + response.status);
+                }
+
+                const text = await response.text();
+                fragmentsContent[index] = text;
+                loadedFragments++;
+
+                updateProgress();
+
+                return true;
+            } catch (error) {
+                console.error(error);
+                // Esperar um segundo antes de tentar novamente
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return await loadFragment(index);
+            }
+        }
+
+        // Função para montar o conteúdo completo
+        function assembleContent() {
+            const fullContent = fragmentsContent.join('');
+            const appContainer = document.getElementById('app');
+
+            // Inserir o conteúdo no DOM
+
+
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(fullContent, "text/html");
+
+            const rootDiv = doc.querySelector("body")
+
+            appContainer.innerHTML = "";
+            Array.from(rootDiv.childNodes).forEach(node => appContainer.appendChild(node));
+
+            // Executa os scripts manualmente
+            doc.querySelectorAll("script").forEach(script => {
+                const newScript = document.createElement("script");
+
+
+                newScript.textContent = script.textContent;
+
+
+                document.body.appendChild(newScript); // Executa o script
+            });
+
+            doc.querySelectorAll("style").forEach(style => {
+                const newStyle = document.createElement("style");
+
+                newStyle.textContent = style.textContent;
+
+                document.head.insertBefore(newStyle, document.head.lastChild);
+
+            });
+        }
+
+        // Função assíncrona para carregar todos os fragmentos sequencialmente
+        async function loadAllFragments() {
+            for (let i = 0; i < totalFragments; i++) {
+                // Esperar cada fragmento carregar antes de passar para o próximo
+                await loadFragment(i);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            // Quando todos os fragmentos forem carregados, montar o conteúdo
+            assembleContent();
+        }
+
+        // Iniciar o carregamento quando a página estiver pronta
+        window.onload = function () {
+            loadAllFragments();
+        };
+    </script>
+</body>
+
+</html>
