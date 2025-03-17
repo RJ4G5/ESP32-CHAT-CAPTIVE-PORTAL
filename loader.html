@@ -47,7 +47,7 @@
 
     <script>
         // Configuração
-        const totalFragments = 5; // Número total de fragmentos
+        const totalFragments = 6; // Número total de fragmentos
         let loadedFragments = 0;
         let fragmentsContent = [];
 
@@ -62,65 +62,103 @@
             document.getElementById('progress-bar').style.width = progress + '%';
         }
 
-        // Função assíncrona para carregar um fragmento específico
         async function loadFragment(index) {
             try {
-                const response = await fetch('/fragments/fragment_' + index + '.html');
-
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos de timeout
+                const response = await fetch('/fragments/fragment_' + index + '.html', { signal: controller.signal });
+                clearTimeout(timeoutId);
+        
                 if (!response.ok) {
                     throw new Error('Erro ao carregar fragmento ' + index + ': ' + response.status);
                 }
-
+        
                 const text = await response.text();
                 fragmentsContent[index] = text;
                 loadedFragments++;
-
                 updateProgress();
-
                 return true;
             } catch (error) {
                 console.error(error);
-                // Esperar um segundo antes de tentar novamente
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 return await loadFragment(index);
             }
         }
 
-        // Função para montar o conteúdo completo
         function assembleContent() {
             const fullContent = fragmentsContent.join('');
             const appContainer = document.getElementById('app');
-
-            // Inserir o conteúdo no DOM
-
-
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(fullContent, "text/html");
-
-            const rootDiv = doc.querySelector("body")
-
-            appContainer.innerHTML = "";
-            Array.from(rootDiv.childNodes).forEach(node => appContainer.appendChild(node));
-
-            // Executa os scripts manualmente
-            doc.querySelectorAll("script").forEach(script => {
-                const newScript = document.createElement("script");
-
-
-                newScript.textContent = script.textContent;
-
-
-                document.body.appendChild(newScript); // Executa o script
-            });
-
-            doc.querySelectorAll("style").forEach(style => {
-                const newStyle = document.createElement("style");
-
-                newStyle.textContent = style.textContent;
-
-                document.head.insertBefore(newStyle, document.head.lastChild);
-
-            });
+        
+            try {
+                // Criar um parser para processar o HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(fullContent, "text/html");
+                
+                // Verificar se o parsing foi bem-sucedido
+                if (!doc.body) {
+                    throw new Error('Erro ao parsear o conteúdo HTML');
+                }
+        
+                // Limpar o container antes de adicionar novo conteúdo
+                appContainer.innerHTML = '';
+                // pega todos os scripts do doc antes de clonar o body
+                const scripts = doc.querySelectorAll("script");
+        
+                // Clonar e adicionar os elementos do body
+                const bodyContent = doc.body;
+                Array.from(bodyContent.childNodes).forEach(node => {
+                    const clonedNode = node.cloneNode(true);
+                    appContainer.appendChild(clonedNode);
+                });
+        
+                // Processar estilos
+                const styles = doc.querySelectorAll("style");
+                styles.forEach(style => {
+                    const newStyle = document.createElement("style");
+                    newStyle.textContent = style.textContent || style.innerHTML;
+                    // Adicionar atributo para identificar estilos dinâmicos
+                    newStyle.setAttribute('data-dynamic', 'true');
+                    document.head.appendChild(newStyle);
+                });
+        
+                // Processar scripts
+               
+                scripts.forEach(script => {
+                    const newScript = document.createElement("script");
+                    if (script.src) {
+                        // Para scripts externos
+                        newScript.src = script.src;
+                        newScript.async = true;
+                    } else {
+                        // Para scripts inline
+                        newScript.textContent = script.textContent || script.innerHTML;
+                    }
+                    // Adicionar atributo para identificar scripts dinâmicos
+                    newScript.setAttribute('data-dynamic', 'true');
+                    // Adicionar tratamento de erro
+                    newScript.onerror = () => console.error(`Erro ao carregar script: ${script.src || 'inline'}`);
+                    document.head.appendChild(newScript);
+                });
+        
+                // Forçar atualização do layout para dispositivos móveis
+                window.dispatchEvent(new Event('resize'));
+                
+                // Adicionar listener para garantir que o conteúdo esteja visível
+                setTimeout(() => {
+                    appContainer.style.display = 'none';
+                    appContainer.offsetHeight; // Forçar reflow
+                    appContainer.style.display = 'block';
+                }, 100);
+        
+            } catch (error) {
+                console.error('Erro ao montar conteúdo:', error);
+                // Fallback: mostrar mensagem de erro para o usuário
+                appContainer.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #721c24;">
+                        Erro ao carregar o conteúdo. Por favor, recarregue a página.
+                    </div>
+                `;
+            }
         }
 
         // Função assíncrona para carregar todos os fragmentos sequencialmente
@@ -128,7 +166,7 @@
             for (let i = 0; i < totalFragments; i++) {
                 // Esperar cada fragmento carregar antes de passar para o próximo
                 await loadFragment(i);
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
 
             // Quando todos os fragmentos forem carregados, montar o conteúdo
