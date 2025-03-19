@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <title>ESP32 HTML Uploader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2196f3;
+            margin-top: 0;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .btn {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #0b7dda;
+        }
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        progress {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f1f1f1;
+        }
+        .success {
+            color: #388e3c;
+        }
+        .error {
+            color: #d32f2f;
+        }
+        .log {
+            height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+        #fragmentSize {
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ESP32 HTML Uploader</h1>
+        
+        <div class="input-group">
+            <label for="fileInput">Selecione o arquivo HTML:</label>
+            <input type="file" id="fileInput" accept=".html,.htm">
+        </div>
+        
+        <div class="input-group">
+            <label for="fragmentSize">Tamanho do fragmento (bytes):</label>
+            <input type="number" id="fragmentSize" value="5120" min="1024" max="10240">
+        </div>
+        
+        <button id="processBtn" class="btn">Processar e Fazer Upload</button>
+        
+        <div class="status" id="status" aria-live="polite"></div>
+        
+        <progress id="uploadProgress" value="0" max="100" style="display: none;"></progress>
+        
+        <div class="log" id="log" aria-live="polite"></div>
+    </div>
+
+    <script>
+        // Função para adicionar log
+        function addLog(message) {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}<br>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // Função para atualizar status
+        function updateStatus(message, isError = false) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = isError ? 'status error' : 'status success';
+        }
+
+        // Função para minificar HTML
+        function minifyHTML(content) {
+            addLog("Iniciando minificação do HTML...");
+            
+            // Remover comentários HTML
+            let result = content.replace(/<!--[\s\S]*?-->/g, '');
+            
+            // Minificar scripts
+            result = result.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, function(match, script) {
+                const minifiedScript = script
+                    .replace(/\/\/.*$/gm, '')
+                    .replace(/\/\*[\s\S]*?\*\//g, '')
+                    .replace(/^\s+|\s+$/gm, '')
+                    .replace(/\s+/g, ' ')
+                    .replace(/;\s*/g, ';')
+                    .replace(/{\s*/g, '{')
+                    .replace(/\s*}/g, '}')
+                    .replace(/,\s*/g, ',')
+                    .replace(/\s*:\s*/g, ':');
+                
+                return `<script>${minifiedScript}<\/script>`;
+            });
+            
+            // Minificar CSS
+            result = result.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, function(match, style) {
+                const minifiedStyle = style
+                    .replace(/\/\*[\s\S]*?\*\//g, '')
+                    .replace(/^\s+|\s+$/gm, '')
+                    .replace(/\s+/g, ' ')
+                    .replace(/;\s*/g, ';')
+                    .replace(/{\s*/g, '{')
+                    .replace(/\s*}/g, '}')
+                    .replace(/,\s*/g, ',')
+                    .replace(/\s*:\s*/g, ':');
+                
+                return `<style>${minifiedStyle}</style>`;
+            });
+            
+            // Minificar HTML
+            result = result
+                .replace(/>\s+</g, '><')
+                .replace(/^\s+|\s+$/gm, '')
+                .replace(/\s+/g, ' ')
+                .replace(/\s+>/g, '>')
+                .replace(/<\s+/g, '<');
+            
+            addLog(`HTML minificado: ${Math.round((1 - result.length / content.length) * 100)}% de redução`);
+            return result;
+        }
+
+        // Função para codificar para base64 com suporte a UTF-8
+        function encodeBase64(content) {
+            addLog("Codificando em base64...");
+            const utf8Bytes = new TextEncoder().encode(content); // Converte para UTF-8
+            const binaryString = Array.from(utf8Bytes).map(byte => String.fromCharCode(byte)).join('');
+            return btoa(binaryString);
+        }
+
+        // Função para dividir em fragmentos
+        function splitIntoFragments(base64content, fragmentSize) {
+            const fragments = [];
+            const totalFragments = Math.ceil(base64content.length / fragmentSize);
+            
+            addLog(`Dividindo em ${totalFragments} fragmentos de ${fragmentSize} bytes...`);
+            
+            for (let i = 0; i < base64content.length; i += fragmentSize) {
+                fragments.push(base64content.substring(i, i + fragmentSize));
+            }
+            
+            return fragments;
+        }
+
+        // Função para fazer upload de um fragmento
+        async function uploadFragment(fragment, index, totalFragments) {
+            const formData = new FormData();
+            const blob = new Blob([fragment], { type: 'text/plain' });
+            formData.append('file', blob, `fragment_${index}.html`);
+            
+            addLog(`Enviando fragmento ${index + 1}/${totalFragments} (${fragment.length} bytes)...`);
+            
+            try {
+                const response = await fetch('/upload', { // Assumindo que existe um endpoint /upload no servidor
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Erro no upload: ${response.status} ${response.statusText}`);
+                }
+                
+                return await response.text();
+            } catch (error) {
+                throw new Error(`Falha no upload do fragmento ${index + 1}: ${error.message}`);
+            }
+        }
+
+        // Função principal para processar o arquivo e fazer upload
+        async function processAndUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const fragmentSizeInput = document.getElementById('fragmentSize');
+            const processBtn = document.getElementById('processBtn');
+            const uploadProgress = document.getElementById('uploadProgress');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                updateStatus('Por favor, selecione um arquivo HTML.', true);
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const fragmentSize = parseInt(fragmentSizeInput.value, 10) || 5120;
+            
+            if (fragmentSize < 1024 || fragmentSize > 10240) {
+                updateStatus('O tamanho do fragmento deve estar entre 1024 e 10240 bytes.', true);
+                return;
+            }
+            
+            try {
+                processBtn.disabled = true;
+                uploadProgress.style.display = 'block';
+                uploadProgress.value = 0;
+                
+                addLog(`Lendo arquivo: ${file.name} (${file.size} bytes)`);
+                const content = await file.text();
+                
+                const minifiedContent = minifyHTML(content);
+                const base64Content = encodeBase64(minifiedContent);
+                addLog(`Tamanho após codificação base64: ${base64Content.length} bytes`);
+                
+                const fragments = splitIntoFragments(base64Content, fragmentSize);
+                addLog(`Arquivo dividido em ${fragments.length} fragmentos`);
+                
+                for (let i = 0; i < fragments.length; i++) {
+                    try {
+                        await uploadFragment(fragments[i], i, fragments.length);
+                        uploadProgress.value = ((i + 1) / fragments.length) * 100;
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    } catch (error) {
+                        updateStatus(error.message, true);
+                        addLog(`ERRO: ${error.message}`);
+                        throw error; // Para garantir que o finally seja executado
+                    }
+                }
+                
+                updateStatus(`Upload concluído com sucesso! ${fragments.length} fragmentos enviados.`);
+                addLog('Processo finalizado com sucesso!');
+            } catch (error) {
+                updateStatus(`Erro durante o processamento: ${error.message}`, true);
+                addLog(`ERRO: ${error.message}`);
+            } finally {
+                processBtn.disabled = false;
+                uploadProgress.style.display = 'none'; // Esconde a barra de progresso
+            }
+        }
+
+        // Configuração dos eventos
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('processBtn').addEventListener('click', processAndUpload);
+        });
+    </script>
+</body>
+</html>

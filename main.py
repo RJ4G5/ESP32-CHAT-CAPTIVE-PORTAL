@@ -5,13 +5,17 @@ import gc
 import uasyncio as asyncio
 import json
 import urandom
+import os
+
+
+
 
 # Configurações
 AP_SSID = 'ESP32-CHAT'
 AP_PASSWORD = '12345678'
 AP_IP = '192.168.4.1'
 MAX_CONNECTIONS = 5  # Limite máximo de conexões WebSocket simultâneas
-
+FRAGMENT_SIZE = 5 * 1024  # 5KB para cada fragmento
 
 
 
@@ -47,49 +51,152 @@ LIMIT_EXCEEDED_HTML = """<!DOCTYPE html>
 </body>
 </html>
 """ % MAX_CONNECTIONS
-async def split_html_file(input_file, output_dir, num_fragments):
+
+async def split_base64_content(filename, output_dir, fragment_size=FRAGMENT_SIZE):
     """
-    Divide um arquivo HTML em múltiplos fragmentos para MicroPython
+    Lê um arquivo e divide em fragmentos menores para otimizar o uso de memória.
     
     Args:
-        input_file: Caminho para o arquivo HTML original
-        output_dir: Diretório onde os fragmentos serão salvos
-        num_fragments: Número de fragmentos a serem criados
+        filename (str): Nome do arquivo a ser processado
+        output_dir (str): Diretório onde os fragmentos serão salvos
+        fragment_size (int): Tamanho de cada fragmento em bytes
+    
+    Returns:
+        int: Número de fragmentos criados, ou 0 em caso de erro
     """
-    import os
-    
-    # Verificar se o diretório existe e criar se necessário
     try:
-        os.stat(output_dir)
-    except OSError:
-        os.mkdir(output_dir)
+        # Criar diretório de saída se não existir
+        try:
+            os.stat(output_dir)
+        except OSError:
+            os.mkdir(output_dir)
+        
+        # Limpar o diretório de saída
+        try:
+            files = os.listdir(output_dir)
+            for file in files:
+                os.remove(f"{output_dir}/{file}")
+                gc.collect()  # Liberar memória após cada remoção
+        except OSError:
+            pass
+        
+        # Abrir o arquivo e determinar seu tamanho
+        file_size = os.stat(filename)[6]  # Índice 6 é o tamanho do arquivo
+        
+        # Calcular o número total de fragmentos
+        num_fragments = (file_size + fragment_size - 1) // fragment_size
+        
+        print(f"Dividindo arquivo de {file_size} bytes em {num_fragments} fragmentos de {fragment_size} bytes")
+        
+        # Processar o arquivo em fragmentos
+        with open(filename, 'rb') as input_file:
+            for i in range(num_fragments):
+                # Liberar memória antes de cada fragmento
+                gc.collect()
+                await asyncio.sleep(0.1)
+                
+                # Abrir o arquivo de fragmento
+                fragment_path = f"{output_dir}/fragment_{i}"
+                with open(fragment_path, 'wb') as out_file:
+                    # Determinar quanto ler para este fragmento
+                    bytes_to_read = min(fragment_size, file_size - (i * fragment_size))
+                    
+                    # Ler e escrever em pequenos blocos
+                    chunk_size = 256  # Processar 256 bytes por vez
+                    bytes_read = 0
+                    
+                    while bytes_read < bytes_to_read:
+                        # Calcular tamanho do próximo chunk
+                        current_chunk_size = min(chunk_size, bytes_to_read - bytes_read)
+                        
+                        # Ler e escrever o chunk
+                        chunk = input_file.read(current_chunk_size)
+                        out_file.write(chunk)
+                        
+                        # Atualizar contadores
+                        bytes_read += len(chunk)
+                        
+                        # Liberar memória e permitir outras tarefas
+                        await asyncio.sleep(0.02)
+                
+                # Mostrar progresso e liberar memória
+                if i % 5 == 0:
+                    print(f"Processado fragmento {i}/{num_fragments}")
+                    gc.collect()
+        
+        # Criando arquivo index.txt com informações dos fragmentos
+        if num_fragments > 0:
+            with open(f'{output_dir}/index.txt', 'w') as f:
+                f.write(f"fragments: {num_fragments}\n")
+                f.write(f"filename: {filename}\n")
+                f.write(f"filesize: {file_size}\n")
+        
+        print(f"Arquivo dividido em {num_fragments} fragmentos")
+        return num_fragments
     
-    # Ler arquivo HTML
-    with open(input_file, 'r') as f:
-        content = f.read()
+    except Exception as e:
+        print(f"Erro ao processar arquivo {filename}: {e}")
+        return 0
+
+async def process_form_data(data, boundary):
+    """
+    Processa dados do formulário de forma eficiente em memória.
     
-    # Calcular tamanho de cada fragmento
-    content_length = len(content)
-    fragment_size = content_length // num_fragments
-    print(f"Dividido arquivo html em {num_fragments} fragmentos")
-    # Criar fragmentos
-    for i in range(num_fragments):
-        start = i * fragment_size
-        end = (i + 1) * fragment_size if i < num_fragments - 1 else content_length
-        
-        fragment = content[start:end]
-        
-        # Caminho do fragmento
-        fragment_path = output_dir + "/fragment_" + str(i) + ".html"
-        
-        # Salvar fragmento
-        with open(fragment_path, 'w') as f:
-            f.write(fragment)
-        
-        # Adicionar atraso depois de cada fragmento
-        await asyncio.sleep(0.05)  # Atraso de 50ms
+    Args:
+        data (bytes): Dados brutos do formulário
+        boundary (bytes): Boundary do formulário multipart
     
-    print(f"Arquivo HTML dividido em {num_fragments} fragmentos.")
+    Returns:
+        dict: Dicionário com os campos do formulário
+    """
+    form_data = {}
+    
+    # Verificar se temos boundary
+    if not boundary:
+        return form_data
+    
+    # Dividir em partes principais
+    parts = data.split(b'--' + boundary)
+    
+    # Processar cada parte
+    for part in parts:
+        # Liberar memória
+        gc.collect()
+        
+        # Ignorar partes vazias ou boundary final
+        if not part or part.strip() == b'--' or part.strip() == b'--\r\n':
+            continue
+        
+        # Extrair nome do campo e valor
+        if b'Content-Disposition: form-data;' in part:
+            # Extrair nome do campo
+            name_start = part.find(b'name="') + 6
+            name_end = part.find(b'"', name_start)
+            
+            if name_start > 5 and name_end > name_start:
+                field_name = part[name_start:name_end].decode()
+                
+                # Extrair conteúdo do campo
+                content_start = part.find(b'\r\n\r\n') + 4
+                if content_start > 3:
+                    content_end = len(part)
+                    if part.endswith(b'\r\n'):
+                        content_end -= 2
+                    
+                    # Para campo de conteúdo, processar em pedaços menores
+                    if field_name == 'content':
+                        field_value = part[content_start:content_end].decode()
+                    else:
+                        # Para outros campos, decodificar normalmente
+                        try:
+                            field_value = part[content_start:content_end].decode()
+                        except UnicodeDecodeError:
+                            # Manter como bytes se não for decodificável
+                            field_value = part[content_start:content_end]
+                    
+                    form_data[field_name] = field_value
+    
+    return form_data
 
 
 
@@ -160,104 +267,156 @@ class WebServer:
     
     # Modificação para enviar HTML grande em partes
     async def handle_http_request(self, client, addr):
+        """
+        Trata uma requisição HTTP.
+        
+        Args:
+            client (socket): Socket do cliente
+            addr (tuple): Endereço do cliente
+        """
         try:
-            client.settimeout(2)  # Timeout de 2 segundos
+            # Configurar socket
+            client.settimeout(5)
             client.setblocking(False)
             data = b''
             
-            # Timeout para receber todos os dados
+            # Timeout para receber dados
             start_time = time.time()
+            
+            # Parâmetros para processamento de requisições
+            headers_received = False
+            
             while True:
                 try:
-                    chunk = client.recv(1024)
+                    # Verificar e liberar memória antes de receber dados
+                    gc.collect()
+                    
+                    chunk = client.recv(512)  # Receber 512 bytes por vez
                     if not chunk:
                         break
+                    
                     data += chunk
-                    if b'\r\n\r\n' in data:
+                    
+                    # Verificar se já recebemos os cabeçalhos completos
+                    if b'\r\n\r\n' in data and not headers_received:
+                        headers_received = True
+                        
+                    # Verificar se estamos recebendo muito dados
+                    if len(data) > 100000:  # 100KB de limite
+                        # Enviar resposta de erro
+                        error_response = "<html><body><h1>Erro</h1><p>Requisição muito grande</p></body></html>"
+                        client.send(b'HTTP/1.1 413 Request Entity Too Large\r\nContent-Type: text/html\r\n\r\n')
+                        client.send(error_response.encode())
                         break
+                    
+                    # Parar se já temos os cabeçalhos
+                    if headers_received:
+                        break
+                        
                 except OSError as e:
                     if e.args[0] == 11:  # EAGAIN/EWOULDBLOCK
-                        if time.time() - start_time > 1:  # 1 segundo de timeout
+                        if time.time() - start_time > 15:  # 15 segundos de timeout
                             break
                         await asyncio.sleep(0.01)
                     else:
                         break
+                
+                # Liberar memória periodicamente
+                if len(data) % 5000 == 0:
+                    gc.collect()
             
+            # Verificar se recebemos dados
             if not data:
                 client.close()
                 return
             
-            # Analisar requisição
-            request = data.decode()
-            request_lines = request.split('\r\n')
-            method, path, _ = request_lines[0].split(' ')
+            # Liberar memória antes de processar
+            gc.collect()
             
-            # Verificar se atingiu o limite de conexões para o WebSocket
-            if self.websocket_server and len(self.websocket_server.clients) >= MAX_CONNECTIONS:
-                # Se estiver no limite, forneça a página de limite excedido
+            # Analisar requisição
+            request_line = data.split(b'\r\n')[0].decode()
+            method, path, _ = request_line.split(' ')
+            
+            # Verificar limite de conexões para WebSocket
+            if hasattr(self, 'websocket_server') and self.websocket_server and len(self.websocket_server.clients) >= MAX_CONNECTIONS:
+                # Enviar página de limite excedido
                 client.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
                 client.send(LIMIT_EXCEEDED_HTML.encode())
             else:
-                # Caso contrário, processe normalmente
-                if 'generate_204' in path or 'connecttest.txt' in path or 'redirect' in path:
-                    # Requisições específicas para detecção de captive portal
-                    client.send(b'HTTP/1.1 302 Found\r\nLocation: http://' + AP_IP.encode() + b'\r\n\r\n')
-                else:
-                    # Enviar cabeçalho HTTP
-                    client.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
+                # Processar requisições GET
+                if method == 'GET':
+                    file_path = None
                     
-                     # Determinar o arquivo a ser servido
+                    # Determinar o arquivo a ser servido
                     if path == '/' or path == '/index.html':
-                        # Servir o carregador inicial leve
                         file_path = 'loader.html'
+                    elif path == '/uploader':
+                        file_path = 'uploader.html'
                     elif path.startswith('/fragments/'):
                         # Servir fragmentos HTML
                         file_name = path.split('/')[-1]
                         file_path = 'fragments/' + file_name
-                    else:
-                        # Outros recursos estáticos
-                        if path.startswith('/'):
-                            file_path = path[1:]  # Remover a barra inicial
-                        else:
-                            file_path = path                  
-                   
+                    elif path == '/generate_204' or path == '/connecttest.txt' or path == '/redirect':
+                        # Requisições para detecção de captive portal
+                        client.send(b'HTTP/1.1 302 Found\r\nLocation: http://' + AP_IP.encode() + b'\r\n\r\n')
+                        client.close()
+                        return
                     
-                    # Ler e enviar o arquivo em chunks
-                    try:
-                        with open(file_path, 'r') as file:
-                            while True:
-                                try:
-                                    chunk = file.read(2048)
+                    if file_path:
+                        try:
+                            with open(file_path, 'r') as file:
+                                # Determinar o tipo de conteúdo
+                                content_type = 'text/html'
+                                if file_path.endswith('.css'):
+                                    content_type = 'text/css'
+                                elif file_path.endswith('.js'):
+                                    content_type = 'application/javascript'
+                                
+                                # Enviar cabeçalho HTTP
+                                client.send(f'HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\n\r\n'.encode())
+                                
+                                # Ler e enviar o arquivo em chunks pequenos
+                                buffer_size = 512  # Reduzido para 512 bytes
+                                while True:
+                                    chunk = file.read(buffer_size)
                                     if not chunk:
                                         break
                                     client.send(chunk.encode())
                                     await asyncio.sleep(0.01)
-                                except OSError as e:
-                                    if e.errno == 11:  # EAGAIN
-                                        await asyncio.sleep(0.05)  # Espera um pouco mais
-                                        continue
-                                    raise
-                    except OSError as e:
-                        print(f"Erro ao ler arquivo {file_path}: {e}")
-                        if e.args[0] != 11:  # Não exibir erro EAGAIN
-                            error_msg = 'Erro ao carregar o arquivo: ' + str(e)
+                                    gc.collect()  # Liberar memória após cada envio
+                        except OSError as e:
+                            print(f"Erro ao ler arquivo {file_path}: {e}")
+                            error_msg = f'<html><body><h1>Erro 404</h1><p>Arquivo não encontrado: {file_path}</p></body></html>'
+                            client.send(b'HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n')
                             client.send(error_msg.encode())
+                    else:
+                        # Arquivo não encontrado
+                        error_msg = f'<html><body><h1>Erro 404</h1><p>Página não encontrada: {path}</p></body></html>'
+                        client.send(b'HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n')
+                        client.send(error_msg.encode())
+                
+                # Processar outros métodos POST (sem upload)
+                elif method == 'POST':
+                    # Resposta genérica para POST quando não é upload
+                    response = "<html><body><h1>Solicitação POST recebida</h1><p>Esta solicitação foi processada.</p></body></html>"
+                    client.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
+                    client.send(response.encode())
             
             client.close()
         
         except OSError as e:
-            if e.errno == 104:  # ECONNRESET
-                print(f"Conexão redefinida de {addr}")
-            elif e.errno == 11:  # EAGAIN
-                print("Recurso temporariamente indisponível")
-            else:
-                print(f"Erro de conexão: {e}")
+            print(f"Erro de conexão: {e}")
+        except Exception as e:
+            print(f"Erro geral: {e}")
+            print(f"Memória livre: {gc.mem_free() if hasattr(gc, 'mem_free') else 'N/A'}")
         finally:
             try:
                 client.close()
             except:
                 pass
-    
+            # Liberar memória ao finalizar
+            gc.collect()
+        
     async def run(self):
         self.start()
         while True:
@@ -533,7 +692,7 @@ async def setup_network():
 async def main():
     # Limpar memória
     gc.collect()
-    
+    await split_base64_content('chat.html', 'fragments', FRAGMENT_SIZE)
     # Configurar rede
     ap = await setup_network()
     
@@ -541,7 +700,7 @@ async def main():
     dns_server = DNSServer(AP_IP)
     websocket_server = WebSocketServer(81)
     web_server = WebServer(80, websocket_server)  # Passando referência do WebSocket server
-    await split_html_file('chat.html', 'fragments', 5)
+    
     # Executar servidores em tarefas paralelas
     await asyncio.gather(
         dns_server.run(),

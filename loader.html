@@ -56,7 +56,49 @@
             fragmentsContent[i] = '';
         }
 
-        // Função para atualizar a barra de progresso
+        async function fetchIndexToJson() {
+            try {
+                // Fazer a requisição para o arquivo index.txt
+                const response = await fetch('fragments/index.txt');
+
+                if (!response.ok) {
+                    return null;
+                    throw new Error(`Erro ao carregar index.txt: ${response.status} ${response.statusText}`);
+                }
+
+                // Obter o conteúdo como texto
+                const text = await response.text();
+
+                // Converter o texto do formato "chave: valor" para um objeto JSON
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                const indexData = {};
+
+                lines.forEach(line => {
+                    // Procura pelo primeiro caractere ":" na linha
+                    const colonIndex = line.indexOf(':');
+
+                    if (colonIndex !== -1) {
+                        // Extrai a chave e o valor
+                        const key = line.substring(0, colonIndex).trim();
+                        const value = line.substring(colonIndex + 1).trim();
+
+                        // Converte para números onde possível
+                        if (key === 'fragments' || key === 'filesize') {
+                            indexData[key] = parseInt(value, 10);
+                        } else {
+                            indexData[key] = value;
+                        }
+                    }
+                });
+
+                console.log('Index data carregado:', indexData);
+                return indexData;
+            } catch (error) {
+                return null
+                console.error('Erro ao processar index.txt:', error);
+                throw error;
+            }
+        }
         function updateProgress() {
             const progress = (loadedFragments / totalFragments) * 100;
             document.getElementById('progress-bar').style.width = progress + '%';
@@ -66,13 +108,13 @@
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos de timeout
-                const response = await fetch('/fragments/fragment_' + index + '.html', { signal: controller.signal });
+                const response = await fetch('/fragments/fragment_' + index, { signal: controller.signal });
                 clearTimeout(timeoutId);
-        
+
                 if (!response.ok) {
                     throw new Error('Erro ao carregar fragmento ' + index + ': ' + response.status);
                 }
-        
+
                 const text = await response.text();
                 fragmentsContent[index] = text;
                 loadedFragments++;
@@ -88,29 +130,29 @@
         function assembleContent() {
             const fullContent = fragmentsContent.join('');
             const appContainer = document.getElementById('app');
-        
+
             try {
                 // Criar um parser para processar o HTML
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(fullContent, "text/html");
-                
+
                 // Verificar se o parsing foi bem-sucedido
                 if (!doc.body) {
                     throw new Error('Erro ao parsear o conteúdo HTML');
                 }
-        
+
                 // Limpar o container antes de adicionar novo conteúdo
                 appContainer.innerHTML = '';
                 // pega todos os scripts do doc antes de clonar o body
                 const scripts = doc.querySelectorAll("script");
-        
+
                 // Clonar e adicionar os elementos do body
                 const bodyContent = doc.body;
                 Array.from(bodyContent.childNodes).forEach(node => {
                     const clonedNode = node.cloneNode(true);
                     appContainer.appendChild(clonedNode);
                 });
-        
+
                 // Processar estilos
                 const styles = doc.querySelectorAll("style");
                 styles.forEach(style => {
@@ -120,9 +162,9 @@
                     newStyle.setAttribute('data-dynamic', 'true');
                     document.head.appendChild(newStyle);
                 });
-        
+
                 // Processar scripts
-               
+
                 scripts.forEach(script => {
                     const newScript = document.createElement("script");
                     if (script.src) {
@@ -139,17 +181,17 @@
                     newScript.onerror = () => console.error(`Erro ao carregar script: ${script.src || 'inline'}`);
                     document.head.appendChild(newScript);
                 });
-        
+
                 // Forçar atualização do layout para dispositivos móveis
                 window.dispatchEvent(new Event('resize'));
-                
+
                 // Adicionar listener para garantir que o conteúdo esteja visível
                 setTimeout(() => {
                     appContainer.style.display = 'none';
                     appContainer.offsetHeight; // Forçar reflow
                     appContainer.style.display = 'block';
                 }, 100);
-        
+
             } catch (error) {
                 console.error('Erro ao montar conteúdo:', error);
                 // Fallback: mostrar mensagem de erro para o usuário
@@ -163,7 +205,11 @@
 
         // Função assíncrona para carregar todos os fragmentos sequencialmente
         async function loadAllFragments() {
-            for (let i = 0; i < totalFragments; i++) {
+            let fragInfo  = await fetchIndexToJson();
+            if (!fragInfo) {
+                return;
+            }
+            for (let i = 0; i < fragInfo.fragments; i++) {
                 // Esperar cada fragmento carregar antes de passar para o próximo
                 await loadFragment(i);
                 await new Promise(resolve => setTimeout(resolve, 300));
