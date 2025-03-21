@@ -131,6 +131,10 @@
             const fullContent = fragmentsContent.join('');
             const appContainer = document.getElementById('app');
 
+            const title_load = document.querySelector('.loading');
+
+            title_load.innerHTML = 'Iniciando o sistema...';
+
             try {
                 // Criar um parser para processar o HTML
                 const parser = new DOMParser();

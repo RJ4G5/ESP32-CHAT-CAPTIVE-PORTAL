@@ -67,7 +67,6 @@
             justify-content: space-between;
             padding: 5px;
             background-color: #fff;
-            box-shadow: 0px 0px 15px #b9b5b5cf;
         }
 
         .chat-header-title {
@@ -76,7 +75,7 @@
         }
 
         .chat-header-title span:nth-child(1) {
-            font-size: 14px;
+            font-size: 19px;
             font-weight: bold;
             color: #424242;
         }
@@ -95,7 +94,6 @@
             background: #ffffff;
             display: flex;
             flex-direction: column;
-            box-shadow: 0px 0px 15px #b9b5b5cf;
         }
 
         .chat-input .chat-input-nikname {
@@ -187,6 +185,10 @@
             font-size: 0.85em;
         }
 
+        .center-msg {
+            justify-content: center;
+        }
+
         .left-msg .msg-bubble {
             border-bottom-left-radius: 0;
         }
@@ -256,9 +258,6 @@
             display: flex;
             align-items: center;
             padding: 10px;
-            background-color: #f5f5f5;
-            border-bottom: 1px solid #e0e0e0;
-            border-radius: 10px;
         }
 
         .control-buttons {
@@ -307,6 +306,13 @@
         .bot05-avatar {
             background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIiBmaWxsPSJub25lIiBzaGFwZS1yZW5kZXJpbmc9ImF1dG8iPjxtZXRhZGF0YSB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIgeG1sbnM6ZGN0ZXJtcz0iaHR0cDovL3B1cmwub3JnL2RjL3Rlcm1zLyI+PHJkZjpSREY+PHJkZjpEZXNjcmlwdGlvbj48ZGM6dGl0bGU+Qm90dHRzPC9kYzp0aXRsZT48ZGM6Y3JlYXRvcj5QYWJsbyBTdGFubGV5PC9kYzpjcmVhdG9yPjxkYzpzb3VyY2UgeHNpOnR5cGU9ImRjdGVybXM6VVJJIj5odHRwczovL2JvdHR0cy5jb20vPC9kYzpzb3VyY2U+PGRjdGVybXM6bGljZW5zZSB4c2k6dHlwZT0iZGN0ZXJtczpVUkkiPmh0dHBzOi8vYm90dHRzLmNvbS88L2RjdGVybXM6bGljZW5zZT48ZGM6cmlnaHRzPlJlbWl4IG9mIOKAnkJvdHR0c+KAnSAoaHR0cHM6Ly9ib3R0dHMuY29tLykgYnkg4oCeUGFibG8gU3RhbmxleeKAnSwgbGljZW5zZWQgdW5kZXIg4oCeRnJlZSBmb3IgcGVyc29uYWwgYW5kIGNvbW1lcmNpYWwgdXNl4oCdIChodHRwczovL2JvdHR0cy5jb20vKTwvZGM6cmlnaHRzPjwvcmRmOkRlc2NyaXB0aW9uPjwvcmRmOlJERj48L21ldGFkYXRhPjxtYXNrIGlkPSJ2aWV3Ym94TWFzayI+PHJlY3Qgd2lkdGg9IjEyMCIgaGVpZ2h0PSIxMjAiIHJ4PSIwIiByeT0iMCIgeD0iMCIgeT0iMCIgZmlsbD0iI2ZmZiIgLz48L21hc2s+PGcgbWFzaz0idXJsKCN2aWV3Ym94TWFzaykiPjxyZWN0IGZpbGw9IiNmZGQ4MzUiIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiB4PSIwIiB5PSIwIiAvPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIyIDY4KSI+PHBhdGggZD0iTTI3LjA1IDguNDRhMiAyIDAgMSAxIDMuOS0uODhDMzEuNzIgMTAuOTYgMzQuNCAxMyAzOCAxM2MzLjYgMCA2LjI4LTIuMDQgNy4wNS01LjQ0YTIgMiAwIDEgMSAzLjkuODhDNDcuNzUgMTMuNyA0My40MyAxNyAzOCAxN3MtOS43Ni0zLjMtMTAuOTUtOC41NloiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iLjYiLz48L2c+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoOCAyMCkiPjxyZWN0IHg9IjciIHk9IjE2IiB3aWR0aD0iOTEiIGhlaWdodD0iMTYiIHJ4PSI0IiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9Ii44Ii8+PG1hc2sgaWQ9ImV5ZXNSb2JvY29wLWEiIHN0eWxlPSJtYXNrLXR5cGU6bHVtaW5hbmNlIiBtYXNrVW5pdHM9InVzZXJTcGFjZU9uVXNlIiB4PSI3IiB5PSIxNiIgd2lkdGg9IjkxIiBoZWlnaHQ9IjE2Ij48cmVjdCB4PSI3IiB5PSIxNiIgd2lkdGg9IjkxIiBoZWlnaHQ9IjE2IiByeD0iNCIgZmlsbD0iI2ZmZiIvPjwvbWFzaz48ZyBtYXNrPSJ1cmwoI2V5ZXNSb2JvY29wLWEpIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuOCI+PHBhdGggZD0iTTc2IDdoMThMODIgMzdINjRMNzYgN1pNNTIgN2g5TDQ5IDM3aC05TDUyIDdaIi8+PC9nPjwvZz48L2c+PC9zdmc+")
         }
+
+        .perfil-user {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-left: 10px;
+        }
     </style>
 </head>
 
@@ -315,18 +321,25 @@
     <div class="root">
         <div class="chat-body">
             <div class="chat-header">
-                <div class="chat-header-title">
-                    <span>Chat Captive Portal</span>
-                    <span>
-                        <userCount id="userCount">1</userCount> usuários online
-                    </span>
-                </div>
-
                 <div class="chat-header-perfil">
                     <div class="msg-img bot05-avatar" style=" width: 23px; height: 23px;"></div>
-                    <div class="pefil-user"> Você é o João</div>
+                    <div class="perfil-user">
+                        <span>
+                            <strong id="user_name">Joao</strong>
+                        </span>
+                        <span>
+                            <userCount id="userCount">1</userCount> usuários online
+                        </span>
+                    </div>
+
 
                 </div>
+                <div class="chat-header-title">
+                    <span>Chat Captive Portal</span>
+
+                </div>
+
+
 
 
             </div>
@@ -499,125 +512,125 @@
     </div>
     <script type="text/javascript">
 
-            // Referência aos elementos
-            const msgerChat = document.getElementById('msger-chat');
-            const scrollUpBtn = document.getElementById('scroll-up');
-            const scrollDownBtn = document.getElementById('scroll-down');
-            const scrollPosition = document.getElementById('scroll-position');
-            console.log(scrollUpBtn);
-            // Configurações de scroll
-            const scrollStep = 40; // Quantidade de pixels para rolar com um clique
-            const scrollInterval = 50; // Intervalo em ms para scroll contínuo
-            let isScrolling = false;
-            let scrollTimer = null;
+        // Referência aos elementos
+        const msgerChat = document.getElementById('msger-chat');
+        const scrollUpBtn = document.getElementById('scroll-up');
+        const scrollDownBtn = document.getElementById('scroll-down');
+        const scrollPosition = document.getElementById('scroll-position');
+        console.log(scrollUpBtn);
+        // Configurações de scroll
+        const scrollStep = 40; // Quantidade de pixels para rolar com um clique
+        const scrollInterval = 50; // Intervalo em ms para scroll contínuo
+        let isScrolling = false;
+        let scrollTimer = null;
 
-            // Inicialmente, rola para o final do chat
-            msgerChat.scrollTop = msgerChat.scrollHeight;
+        // Inicialmente, rola para o final do chat
+        msgerChat.scrollTop = msgerChat.scrollHeight;
+        updateScrollIndicator();
+
+        // Função para atualizar o indicador de posição do scroll
+        function updateScrollIndicator() {
+            const scrollPercentage = msgerChat.scrollTop / (msgerChat.scrollHeight - msgerChat.clientHeight) * 100;
+            const indicatorHeight = Math.min(Math.max(scrollPercentage, 12), 100); // Min 7%, max 100%
+
+            // scrollPosition.style.height = indicatorHeight + '%';
+            scrollPosition.style.bottom = (100 - indicatorHeight) + '%';
+        }
+
+        // Função para rolar para cima
+        function scrollUp() {
+            msgerChat.scrollTop -= scrollStep;
             updateScrollIndicator();
+        }
 
-            // Função para atualizar o indicador de posição do scroll
-            function updateScrollIndicator() {
-                const scrollPercentage = msgerChat.scrollTop / (msgerChat.scrollHeight - msgerChat.clientHeight) * 100;
-                const indicatorHeight = Math.min(Math.max(scrollPercentage, 12), 100); // Min 7%, max 100%
+        // Função para rolar para baixo
+        function scrollDown() {
+            msgerChat.scrollTop += scrollStep;
+            updateScrollIndicator();
+        }
 
-                // scrollPosition.style.height = indicatorHeight + '%';
-                scrollPosition.style.bottom = (100 - indicatorHeight) + '%';
-            }
+        // Event listeners para cliques nos botões
+        scrollUpBtn.addEventListener('click', function () {
+            console.log('scrollUpBtn');
+            scrollUp();
+        });
 
-            // Função para rolar para cima
-            function scrollUp() {
-                msgerChat.scrollTop -= scrollStep;
-                updateScrollIndicator();
-            }
+        scrollDownBtn.addEventListener('click', function () {
+            scrollDown();
+        });
 
-            // Função para rolar para baixo
-            function scrollDown() {
-                msgerChat.scrollTop += scrollStep;
-                updateScrollIndicator();
-            }
+        // Event listeners para pressionar e manter pressionado
+        scrollUpBtn.addEventListener('touchstart', function (e) {
+            e.preventDefault(); // Previne comportamentos indesejados em dispositivos móveis
+            if (isScrolling) return;
 
-            // Event listeners para cliques nos botões
-            scrollUpBtn.addEventListener('click', function () {
-                console.log('scrollUpBtn');
+            isScrolling = true;
+            scrollUp();
+
+            scrollTimer = setInterval(function () {
                 scrollUp();
-            });
+            }, scrollInterval);
+        });
 
-            scrollDownBtn.addEventListener('click', function () {
+        scrollDownBtn.addEventListener('touchstart', function (e) {
+            e.preventDefault(); // Previne comportamentos indesejados em dispositivos móveis
+            if (isScrolling) return;
+
+            isScrolling = true;
+            scrollDown();
+
+            scrollTimer = setInterval(function () {
                 scrollDown();
-            });
+            }, scrollInterval);
+        });
 
-            // Event listeners para pressionar e manter pressionado
-            scrollUpBtn.addEventListener('touchstart', function (e) {
-                e.preventDefault(); // Previne comportamentos indesejados em dispositivos móveis
-                if (isScrolling) return;
-
-                isScrolling = true;
-                scrollUp();
-
-                scrollTimer = setInterval(function () {
-                    scrollUp();
-                }, scrollInterval);
-            });
-
-            scrollDownBtn.addEventListener('touchstart', function (e) {
-                e.preventDefault(); // Previne comportamentos indesejados em dispositivos móveis
-                if (isScrolling) return;
-
-                isScrolling = true;
-                scrollDown();
-
-                scrollTimer = setInterval(function () {
-                    scrollDown();
-                }, scrollInterval);
-            });
-
-            // Event listeners para parar o scroll ao soltar o botão
-            function stopScrolling() {
-                if (scrollTimer) {
-                    clearInterval(scrollTimer);
-                    scrollTimer = null;
-                }
-                isScrolling = false;
+        // Event listeners para parar o scroll ao soltar o botão
+        function stopScrolling() {
+            if (scrollTimer) {
+                clearInterval(scrollTimer);
+                scrollTimer = null;
             }
+            isScrolling = false;
+        }
 
-            scrollUpBtn.addEventListener('touchend', stopScrolling);
-            scrollUpBtn.addEventListener('touchcancel', stopScrolling);
-            scrollDownBtn.addEventListener('touchend', stopScrolling);
-            scrollDownBtn.addEventListener('touchcancel', stopScrolling);
+        scrollUpBtn.addEventListener('touchend', stopScrolling);
+        scrollUpBtn.addEventListener('touchcancel', stopScrolling);
+        scrollDownBtn.addEventListener('touchend', stopScrolling);
+        scrollDownBtn.addEventListener('touchcancel', stopScrolling);
 
-            // Para suporte a mouse também (desktops)
-            scrollUpBtn.addEventListener('mousedown', function (e) {
-                e.preventDefault();
-                if (isScrolling) return;
+        // Para suporte a mouse também (desktops)
+        scrollUpBtn.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            if (isScrolling) return;
 
-                isScrolling = true;
+            isScrolling = true;
+            scrollUp();
+
+            scrollTimer = setInterval(function () {
                 scrollUp();
+            }, scrollInterval);
+        });
 
-                scrollTimer = setInterval(function () {
-                    scrollUp();
-                }, scrollInterval);
-            });
+        scrollDownBtn.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            if (isScrolling) return;
 
-            scrollDownBtn.addEventListener('mousedown', function (e) {
-                e.preventDefault();
-                if (isScrolling) return;
+            isScrolling = true;
+            scrollDown();
 
-                isScrolling = true;
+            scrollTimer = setInterval(function () {
                 scrollDown();
+            }, scrollInterval);
+        });
 
-                scrollTimer = setInterval(function () {
-                    scrollDown();
-                }, scrollInterval);
-            });
-
-            document.addEventListener('mouseup', stopScrolling);
-
-    
+        document.addEventListener('mouseup', stopScrolling);
 
 
-        /*
 
- 
+
+
+
+
         const el = {
             chat: document.getElementById('msger-chat'),
             input: document.getElementById('chat-input-text'),
@@ -638,28 +651,26 @@
             { nome: "Maria", avatar: "bot02-avatar", id: 2 },
             { nome: "João", avatar: "bot03-avatar", id: 3 },
             { nome: "Ana", avatar: "bot04-avatar", id: 4 },
-            { nome: "Pedro", avatar: "bot05-avatar", id: 5 }
+            { nome: "Pedro", avatar: "bot05-avatar", id: 5 },
+            { nome: "Sistema", id: 6 },
+            { nome: "Servidor", id: 7 }
         ];
 
         // Variável para controlar o número atual de usuários
         let currentUserCount = 0;
 
         // Função para obter o próximo usuário disponível
-        function getNextUser() {
+        function getUser(id) {
             // Verificar se já atingiu o limite de usuários
-            if (currentUserCount >= predefinedUsers.length) {
-                // Se ultrapassar 5 usuários, recicla do início
-                currentUserCount = 0;
+            if (id) {
+                return predefinedUsers.find(user => user.id == id);
             }
-
-            // Incrementa o contador e retorna o usuário correspondente
-            return predefinedUsers[currentUserCount++];
         }
 
         // Gerar ID único para cada cliente
-        const currentUser = getNextUser();
-        
-   
+        let currentUser;
+
+
 
         // Função para obter horário formatado
         function getTime() {
@@ -672,44 +683,51 @@
             try {
                 // Criar conexão WebSocket com verificação de protocolo
                 const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-                const ws = new WebSocket(protocol + window.location.hostname + ':81/ws');
+                const ws = new WebSocket('ws://192.168.4.1:81/ws');
 
                 // Quando conectar ao servidor
                 ws.onopen = function () {
-                    addMsg("Conectado ao chat!", "system");
 
-                    // Identificar o usuário
-                    ws.send(JSON.stringify({
-                        type: 'identify',
-                        username: currentUser.nome,
-                        clientId: currentUser.id
-                    }));
-
-                    // Solicitar histórico após um pequeno delay
-                    setTimeout(() => {
-                        requestSync(ws);
-                    }, 1000);
                 };
 
                 // Receber mensagens do WebSocket
                 ws.onmessage = function (e) {
                     try {
                         const data = JSON.parse(e.data);
-
+                        console.log(data);
                         if (data.type === 'message') {
-                            const exists = history.some(m => m.id === data.id && m.usuario === data.sender);
+                            const exists = history.some(m => m.id === data.id && m.usuarioId === data.senderId);
                             if (!exists) {
-                                addMsg(data.sender + ": " + data.content, data.senderId === clientId ? "mine" : "others");
+
+                                addMsg(data.content, data.senderId === currentUser.id ? "right-msg" : "left-msg",  data.senderId, data.timestamp);
                                 history.push({
                                     id: data.id || ++lastId,
                                     data: data.timestamp || getTime(),
-                                    usuario: data.sender,
+                                    usuarioId: data.senderId,
                                     mensagem: data.content
                                 });
                             }
                         }
                         else if (data.type === 'identify') {
                             addMsg(`${data.username || 'Novo usuário'} se conectou`, "system");
+                        }
+                        else if (data.type === 'idClient') {
+
+                            currentUser = getUser(parseInt(data.content));
+                            addMsg(`Você está conectado como ${currentUser.nome}`, "system");
+
+                            // se identifica para outros usuarios
+                            ws.send(JSON.stringify({
+                                type: 'identify',
+                                username: currentUser.nome,
+                                clientId: currentUser.id
+                            }));
+
+                            // Solicitar histórico após um pequeno delay
+                            setTimeout(() => {
+                                requestSync(ws);
+                            }, 1000);
+
                         }
                         else if (data.type === 'userCount') {
                             el.count.textContent = data.count;
@@ -721,20 +739,20 @@
                                     type: 'syncResponse',
                                     targetClientId: data.clientId,
                                     history: history,
-                                    sender: username,
-                                    senderId: clientId
+                                    sender: currentUser.nome,
+                                    senderId: currentUser.id
                                 }));
                             }
                         }
-                        else if (data.type === 'syncResponse' && data.targetClientId === clientId) {
+                        else if (data.type === 'syncResponse' && data.targetClientId === currentUser.id) {
                             if (data.history && data.history.length > 0) {
                                 if (history.length === 0) el.chat.innerHTML = '';
 
                                 data.history.forEach(msg => {
-                                    const exists = history.some(m => m.id === msg.id && m.usuario === msg.usuario);
+                                    const exists = history.some(m => m.id === msg.id && m.usuarioId === msg.usuarioId);
                                     if (!exists) {
-                                        const type = msg.usuario === username ? "mine" : "others";
-                                        addMsg(`${msg.usuario}: ${msg.mensagem}`, type);
+                                        const type = msg.usuarioId === currentUser.id ? "right-msg" : "left-msg";
+                                        addMsg(msg.mensagem, type, msg.usuarioId, msg.data);
                                         if (msg.id > lastId) lastId = msg.id;
                                         history.push(msg);
                                     }
@@ -779,8 +797,8 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
                     type: 'syncRequest',
-                    username: username,
-                    clientId: clientId,
+                    username: currentUser.nome,
+                    clientId: currentUser.id,
                     messageCount: history.length // Enviar a quantidade de mensagens armazenadas
                 }));
             } else {
@@ -789,15 +807,90 @@
         }
 
         // Função para adicionar mensagens ao chat
-        function addMsg(msg, type) {
+        function addMsg(msg, type, userID, timestamp) {
             if (!el.chat) return;
 
-            const div = document.createElement('div');
-            div.textContent = msg;
-            div.className = 'message ' + type;
-            el.chat.appendChild(div);
+
+            // Cria o container principal da mensagem
+            const msgDiv = document.createElement('div');
+            if (type == 'system') {
+                msgDiv.className = `msg center-msg`;
+            } else {
+                msgDiv.className = `msg ${type}`;
+            }
+
+
+
+
+            // Cria o bubble da mensagem
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'msg-bubble';
+
+            // Cria a seção de informações
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'msg-info';
+
+
+
+            // Texto da mensagem
+            const textDiv = document.createElement('div');
+            textDiv.className = 'msg-text';
+            textDiv.textContent = msg;
+
+
+            let timeDiv;
+            let nameDiv;
+            let avatarDiv;
+            try {
+
+
+
+                if (userID) {
+                    // Encontra o usuário na lista predefinedUsers
+                    const user = predefinedUsers.find(u => u.id === userID);
+
+
+                    // Cria o elemento do avatar
+                    avatarDiv = document.createElement('div');
+                    avatarDiv.className = `msg-img ${user.avatar}`;
+                    // Nome do usuário
+                    nameDiv = document.createElement('div');
+                    nameDiv.className = 'msg-info-name';
+                    nameDiv.textContent = user.nome;
+
+                    msgDiv.appendChild(avatarDiv);
+                    infoDiv.appendChild(nameDiv);
+                }
+
+                if (timestamp) {
+
+                    // Timestamp
+                    timeDiv = document.createElement('div');
+                    timeDiv.className = 'msg-info-time';
+                    timeDiv.textContent = timestamp;
+                    infoDiv.appendChild(timeDiv);
+                }
+            } catch (e) {
+
+            }
+
+            if (type == 'system') {
+                // define nome de usuário system
+                nameDiv = document.createElement('div');
+                nameDiv.className = 'msg-info-name';
+                nameDiv.textContent = 'Sistema';
+            }
+
+            // Monta a estrutura
+            bubbleDiv.appendChild(infoDiv);
+            bubbleDiv.appendChild(textDiv);
+            msgDiv.appendChild(bubbleDiv);
+
+            // Adiciona ao chat e ajusta o scroll
+            el.chat.appendChild(msgDiv);
             el.chat.scrollTop = el.chat.scrollHeight;
         }
+
 
         // Enviar mensagem
         function sendMessage(ws) {
@@ -810,19 +903,19 @@
 
                 ws.send(JSON.stringify({
                     type: 'message',
-                    sender: username,
+                    sender: currentUser.nome,
                     content: msg,
-                    senderId: clientId,
+                    senderId: currentUser.id,
                     id: msgId,
                     timestamp: time
                 }));
 
-                addMsg(username + ": " + msg, "mine");
+                addMsg(msg, "right-msg", currentUser.id, time);
 
                 history.push({
                     id: msgId,
                     data: time,
-                    usuario: username,
+                    usuarioId: currentUser.id,
                     mensagem: msg
                 });
 
@@ -850,10 +943,8 @@
             }
         }
 
-        // Iniciar o chat quando o DOM estiver pronto
-        document.addEventListener('DOMContentLoaded', initChat);
+        initChat()
 
-*/
     </script>
 
 
