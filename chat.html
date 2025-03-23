@@ -188,9 +188,11 @@
         .center-msg {
             justify-content: center;
         }
-        .center-msg .msg-bubble .msg-info{
+
+        .center-msg .msg-bubble .msg-info {
             display: none;
         }
+
         .center-msg .msg-bubble .msg-text {
             color: #2b2b2b;
             font-weight: bold;
@@ -286,12 +288,12 @@
             touch-action: auto;
         }
 
-        .control-buttons #scroll-up   {
+        .control-buttons #scroll-up {
             box-shadow: 0px 4px 12px #4b4b4b45;
             z-index: 0;
         }
 
-        .control-buttons #scroll-down   {
+        .control-buttons #scroll-down {
             box-shadow: 0px -4px 12px #4b4b4b45;
             z-index: 0;
         }
@@ -355,7 +357,7 @@
 
 
                 </div>
-               
+
 
 
 
@@ -392,447 +394,427 @@
 
     </div>
     <script type="text/javascript">
+        class ChatController {
+            // Configurações constantes
+            static SCROLL_CONFIG = {
+                STEP: 40,           // Pixels por passo de rolagem
+                INTERVAL: 50,       // Intervalo em ms para rolagem contínua
+                INDICATOR_MIN: 12   // Altura mínima do indicador em %
+            };
 
-        // Referência aos elementos
-        const msgerChat = document.getElementById('msger-chat');
-        const scrollUpBtn = document.getElementById('scroll-up');
-        const scrollDownBtn = document.getElementById('scroll-down');
-        const scrollPosition = document.getElementById('scroll-position');
-        console.log(scrollUpBtn);
-        // Configurações de scroll
-        const scrollStep = 40; // Quantidade de pixels para rolar com um clique
-        const scrollInterval = 50; // Intervalo em ms para scroll contínuo
-        let isScrolling = false;
-        let scrollTimer = null;
+            // Elementos DOM organizados
+            static DOM_ELEMENTS = {
+                chatContainer: 'msger-chat',
+                scrollUpButton: 'scroll-up',
+                scrollDownButton: 'scroll-down',
+                scrollIndicator: 'scroll-position',
+                chatInput: 'chat-input-text',
+                sendButton: 'sendButton',
+                userCountDisplay: 'userCount',
+                userNameDisplay: 'user_name',
+                profileImage: '.chat-header-perfil .msg-img'
+            };
 
-        // Inicialmente, rola para o final do chat
-        msgerChat.scrollTop = msgerChat.scrollHeight;
-        updateScrollIndicator();
+            // Usuários predefinidos
+            static PREDEFINED_USERS = [
+                { name: "Cupuaçu", avatar: "bot01-avatar", id: 1 },
+                { name: "Jabuticaba", avatar: "bot02-avatar", id: 2 },
+                { name: "Açaí", avatar: "bot03-avatar", id: 3 },
+                { name: "Bacuri", avatar: "bot04-avatar", id: 4 },
+                { name: "Uxi", avatar: "bot05-avatar", id: 5 },
+                { name: "Sistema", id: 6 },
+                { name: "Servidor", id: 7 }
+            ];
 
-        // Função para atualizar o indicador de posição do scroll
-        function updateScrollIndicator() {
-            const scrollPercentage = msgerChat.scrollTop / (msgerChat.scrollHeight - msgerChat.clientHeight) * 100;
-            const indicatorHeight = Math.min(Math.max(scrollPercentage, 12), 100); // Min 7%, max 100%
-
-            // scrollPosition.style.height = indicatorHeight + '%';
-            scrollPosition.style.bottom = (100 - indicatorHeight) + '%';
-        }
-
-        // Função para rolar para cima
-        function scrollUp() {
-            msgerChat.scrollTop -= scrollStep;
-            updateScrollIndicator();
-        }
-
-        // Função para rolar para baixo
-        function scrollDown() {
-            msgerChat.scrollTop += scrollStep;
-            updateScrollIndicator();
-        }
-
-        // Event listeners para cliques nos botões
-        scrollUpBtn.addEventListener('click', function () {
-            console.log('scrollUpBtn');
-            scrollUp();
-        });
-
-        scrollDownBtn.addEventListener('click', function () {
-            scrollDown();
-        });
-
-        // Event listeners para pressionar e manter pressionado
-        scrollUpBtn.addEventListener('touchstart', function (e) {
-            e.preventDefault(); // Previne comportamentos indesejados em dispositivos móveis
-            if (isScrolling) return;
-
-            isScrolling = true;
-            scrollUp();
-
-            scrollTimer = setInterval(function () {
-                scrollUp();
-            }, scrollInterval);
-        });
-
-        scrollDownBtn.addEventListener('touchstart', function (e) {
-            e.preventDefault(); // Previne comportamentos indesejados em dispositivos móveis
-            if (isScrolling) return;
-
-            isScrolling = true;
-            scrollDown();
-
-            scrollTimer = setInterval(function () {
-                scrollDown();
-            }, scrollInterval);
-        });
-
-        // Event listeners para parar o scroll ao soltar o botão
-        function stopScrolling() {
-            if (scrollTimer) {
-                clearInterval(scrollTimer);
-                scrollTimer = null;
-            }
-            isScrolling = false;
-        }
-
-        scrollUpBtn.addEventListener('touchend', stopScrolling);
-        scrollUpBtn.addEventListener('touchcancel', stopScrolling);
-        scrollDownBtn.addEventListener('touchend', stopScrolling);
-        scrollDownBtn.addEventListener('touchcancel', stopScrolling);
-
-        // Para suporte a mouse também (desktops)
-        scrollUpBtn.addEventListener('mousedown', function (e) {
-            e.preventDefault();
-            if (isScrolling) return;
-
-            isScrolling = true;
-            scrollUp();
-
-            scrollTimer = setInterval(function () {
-                scrollUp();
-            }, scrollInterval);
-        });
-
-        scrollDownBtn.addEventListener('mousedown', function (e) {
-            e.preventDefault();
-            if (isScrolling) return;
-
-            isScrolling = true;
-            scrollDown();
-
-            scrollTimer = setInterval(function () {
-                scrollDown();
-            }, scrollInterval);
-        });
-
-        document.addEventListener('mouseup', stopScrolling);
-
-
-
-
-
-
-
-        const el = {
-            chat: document.getElementById('msger-chat'),
-            input: document.getElementById('chat-input-text'),
-            btn: document.getElementById('sendButton'),
-            count: document.getElementById('userCount')
-        };
-
-        // Verificar se todos os elementos existem
-        if (!el.chat || !el.input || !el.btn || !el.count) {
-            console.error("Alguns elementos não foram encontrados na página");
-        }
-
-        let history = [], lastId = 0;
-
-        // Array de usuários predefinidos
-        const predefinedUsers = [
-            { nome: "Cupuaçu", avatar: "bot01-avatar", id: 1 },
-            { nome: "Jabuticaba", avatar: "bot02-avatar", id: 2 },
-            { nome: "Açaí", avatar: "bot03-avatar", id: 3 },
-            { nome: "Bacuri", avatar: "bot04-avatar", id: 4 },
-            { nome: "Uxi", avatar: "bot05-avatar", id: 5 },
-            { nome: "Sistema", id: 6 },
-            { nome: "Servidor", id: 7 }
-        ];
-
-        // Variável para controlar o número atual de usuários
-        let currentUserCount = 0;
-
-        // Função para obter o próximo usuário disponível
-        function getUser(id) {
-            // Verificar se já atingiu o limite de usuários
-            if (id) {
-                return predefinedUsers.find(user => user.id == id);
-            }
-        }
-
-        // Gerar ID único para cada cliente
-        let currentUser;
-
-
-
-        // Função para obter horário formatado
-        function getTime() {
-            const d = new Date();
-            return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-        }
-
-        // Verificação de conexão WebSocket
-        function createWebSocketConnection() {
-            try {
-                // Criar conexão WebSocket com verificação de protocolo
-                const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-                const ws = new WebSocket('ws://192.168.4.1:81/ws');
-
-                // Quando conectar ao servidor
-                ws.onopen = function () {
-
+            constructor() {
+                this.elements = this.initializeElements();
+                this.webSocket = null;
+                this.currentUser = null;
+                this.messageHistory = [];
+                this.lastMessageId = 0;
+                this.scrollState = {
+                    isActive: false,
+                    timer: null
                 };
 
-                // Receber mensagens do WebSocket
-                ws.onmessage = function (e) {
-                    try {
-                        const data = JSON.parse(e.data);
-                        console.log(data);
-                        if (data.type === 'message') {
-                            const exists = history.some(m => m.id === data.id && m.usuarioId === data.senderId);
-                            if (!exists) {
-
-                                addMsg(data.content, data.senderId === currentUser.id ? "right-msg" : "left-msg", data.senderId, data.timestamp);
-                                history.push({
-                                    id: data.id || ++lastId,
-                                    data: data.timestamp || getTime(),
-                                    usuarioId: data.senderId,
-                                    mensagem: data.content
-                                });
-                            }
-                        }
-                        else if (data.type === 'identify') {
-                            addMsg(`${data.username || 'Novo usuário'} se conectou`, "system");
-                        }
-                        else if (data.type === 'idClient') {
-
-                            currentUser = getUser(parseInt(data.content));
-                            document.getElementById('user_name').textContent = currentUser.nome;
-                            document.querySelector(".chat-header-perfil .msg-img").classList.add(currentUser.avatar);
-                            addMsg(`Você está conectado como ${currentUser.nome}`, "system");
-
-                            // se identifica para outros usuarios
-                            ws.send(JSON.stringify({
-                                type: 'identify',
-                                username: currentUser.nome,
-                                clientId: currentUser.id
-                            }));
-
-                            // Solicitar histórico após um pequeno delay
-                            setTimeout(() => {
-                                requestSync(ws);
-                            }, 1000);
-
-                        }
-                        else if (data.type === 'userCount') {
-                            el.count.textContent = data.count;
-                        }
-                        else if (data.type === 'userDesconect') {
-                            let user = getUser(parseInt(data.content));
-                            addMsg(`${user.nome} desconectou`, "system");
-                            
-                        }
-                        else if (data.type === 'syncRequest' && !data.targetClientId) {
-                            // Cliente com mais mensagens responde
-                            if (history.length > data.messageCount) {
-                                ws.send(JSON.stringify({
-                                    type: 'syncResponse',
-                                    targetClientId: data.clientId,
-                                    history: history,
-                                    sender: currentUser.nome,
-                                    senderId: currentUser.id
-                                }));
-                            }
-                        }
-                        else if (data.type === 'syncResponse' && data.targetClientId === currentUser.id) {
-                            if (data.history && data.history.length > 0) {
-                                if (history.length === 0) el.chat.innerHTML = '';
-
-                                data.history.forEach(msg => {
-                                    const exists = history.some(m => m.id === msg.id && m.usuarioId === msg.usuarioId);
-                                    if (!exists) {
-                                        const type = msg.usuarioId === currentUser.id ? "right-msg" : "left-msg";
-                                        addMsg(msg.mensagem, type, msg.usuarioId, msg.data);
-                                        if (msg.id > lastId) lastId = msg.id;
-                                        history.push(msg);
-                                    }
-                                });
-
-                                addMsg("Histórico sincronizado!", "system");
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Erro ao processar mensagem:", error);
-                        addMsg("Erro ao processar mensagem", "system");
-                    }
-                };
-
-                // Quando desconectar do servidor
-                ws.onclose = function (event) {
-                    addMsg(`Desconectado do servidor (código: ${event.code})!`, "system");
-
-                    // Tentar reconectar após 5 segundos
-                    setTimeout(() => {
-                        addMsg("Tentando reconectar...", "system");
-                        initChat();
-                    }, 5000);
-                };
-
-                // Tratar erros de conexão
-                ws.onerror = function (error) {
-                    console.error("Erro de WebSocket:", error);
-                    addMsg("Erro de conexão", "system");
-                };
-
-                return ws;
-            } catch (error) {
-                console.error("Falha ao criar conexão WebSocket:", error);
-                addMsg("Falha ao conectar. Tente novamente mais tarde.", "system");
-                return null;
-            }
-        }
-
-        // Solicitar sincronização de histórico
-        function requestSync(ws) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    type: 'syncRequest',
-                    username: currentUser.nome,
-                    clientId: currentUser.id,
-                    messageCount: history.length // Enviar a quantidade de mensagens armazenadas
-                }));
-            } else {
-                console.warn("WebSocket não está aberto para solicitar sincronização");
-            }
-        }
-
-        // Função para adicionar mensagens ao chat
-        function addMsg(msg, type, userID, timestamp) {
-            if (!el.chat) return;
-
-
-            // Cria o container principal da mensagem
-            const msgDiv = document.createElement('div');
-            if (type == 'system') {
-                msgDiv.className = `msg center-msg`;
-            } else {
-                msgDiv.className = `msg ${type}`;
+                this.initializeChat();
             }
 
-
-
-
-            // Cria o bubble da mensagem
-            const bubbleDiv = document.createElement('div');
-            bubbleDiv.className = 'msg-bubble';
-
-            // Cria a seção de informações
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'msg-info';
-
-
-
-            // Texto da mensagem
-            const textDiv = document.createElement('div');
-            textDiv.className = 'msg-text';
-            textDiv.textContent = msg;
-
-
-            let timeDiv;
-            let nameDiv;
-            let avatarDiv;
-            try {
-
-
-
-                if (userID) {
-                    // Encontra o usuário na lista predefinedUsers
-                    const user = predefinedUsers.find(u => u.id === userID);
-
-
-                    // Cria o elemento do avatar
-                    avatarDiv = document.createElement('div');
-                    avatarDiv.className = `msg-img ${user.avatar}`;
-                    // Nome do usuário
-                    nameDiv = document.createElement('div');
-                    nameDiv.className = 'msg-info-name';
-                    nameDiv.textContent = user.nome;
-
-                    msgDiv.appendChild(avatarDiv);
-                    infoDiv.appendChild(nameDiv);
+            // Inicialização dos elementos DOM
+            initializeElements() {
+                const elements = {};
+                for (const [key, id] of Object.entries(ChatController.DOM_ELEMENTS)) {
+                    elements[key] = id.startsWith('.')
+                        ? document.querySelector(id)
+                        : document.getElementById(id);
                 }
 
-                if (timestamp) {
-
-                    // Timestamp
-                    timeDiv = document.createElement('div');
-                    timeDiv.className = 'msg-info-time';
-                    timeDiv.textContent = timestamp;
-                    infoDiv.appendChild(timeDiv);
+                if (Object.values(elements).some(el => !el)) {
+                    console.error("Alguns elementos DOM não foram encontrados");
                 }
-            } catch (e) {
-
+                return elements;
             }
 
-            if (type == 'system') {
-                // define nome de usuário system
-                nameDiv = document.createElement('div');
-                nameDiv.className = 'msg-info-name';
-                nameDiv.textContent = 'Sistema';
+            // Configuração inicial do chat
+            initializeChat() {
+                this.setupScrollEvents();
+                this.scrollToBottom();
+                this.webSocket = this.createWebSocketConnection();
+
+                if (this.webSocket) {
+                    this.setupInputEvents();
+                }
             }
 
-            // Monta a estrutura
-            bubbleDiv.appendChild(infoDiv);
-            bubbleDiv.appendChild(textDiv);
-            msgDiv.appendChild(bubbleDiv);
+            // Configuração dos eventos de rolagem
+            setupScrollEvents() {
+                const { chatContainer, scrollUpButton, scrollDownButton } = this.elements;
 
-            // Adiciona ao chat e ajusta o scroll
-            el.chat.appendChild(msgDiv);
-            el.chat.scrollTop = el.chat.scrollHeight;
-        }
+                this.updateScrollIndicator();
+                chatContainer.addEventListener('scroll', () => this.updateScrollIndicator());
 
+                const scrollEvents = [
+                    { element: scrollUpButton, direction: -1 },
+                    { element: scrollDownButton, direction: 1 }
+                ];
 
-        // Enviar mensagem
-        function sendMessage(ws) {
-            if (!el.input) return;
-
-            const msg = el.input.value.trim();
-            if (msg && ws && ws.readyState === WebSocket.OPEN) {
-                const msgId = ++lastId;
-                const time = getTime();
-
-                ws.send(JSON.stringify({
-                    type: 'message',
-                    sender: currentUser.nome,
-                    content: msg,
-                    senderId: currentUser.id,
-                    id: msgId,
-                    timestamp: time
-                }));
-
-                addMsg(msg, "right-msg", currentUser.id, time);
-
-                history.push({
-                    id: msgId,
-                    data: time,
-                    usuarioId: currentUser.id,
-                    mensagem: msg
+                scrollEvents.forEach(({ element, direction }) => {
+                    this.addScrollEventListeners(element, () => this.scrollChat(direction));
                 });
-
-                el.input.value = '';
-            } else if (ws && ws.readyState !== WebSocket.OPEN) {
-                addMsg("Você está desconectado. Aguarde reconexão...", "system");
             }
-        }
 
-        // Inicialização
-        function initChat() {
-            const ws = createWebSocketConnection();
+            // Adiciona eventos de rolagem para mouse e touch
+            addScrollEventListeners(element, scrollFunction) {
+                const startScrolling = (e) => {
+                    e.preventDefault();
+                    if (this.scrollState.isActive) return;
 
-            if (ws) {
-                // Configurar eventos
-                if (el.btn) {
-                    el.btn.onclick = () => sendMessage(ws);
+                    this.scrollState.isActive = true;
+                    scrollFunction();
+
+                    this.scrollState.timer = setInterval(scrollFunction, ChatController.SCROLL_CONFIG.INTERVAL);
+                };
+
+                const stopScrolling = () => {
+                    if (this.scrollState.timer) {
+                        clearInterval(this.scrollState.timer);
+                        this.scrollState.timer = null;
+                    }
+                    this.scrollState.isActive = false;
+                };
+
+                element.addEventListener('mousedown', startScrolling);
+                element.addEventListener('touchstart', startScrolling);
+                element.addEventListener('mouseup', stopScrolling);
+                element.addEventListener('touchend', stopScrolling);
+                element.addEventListener('touchcancel', stopScrolling);
+                element.addEventListener('click', scrollFunction);
+            }
+
+            // Função de rolagem do chat
+            scrollChat(direction) {
+                this.elements.chatContainer.scrollTop += direction * ChatController.SCROLL_CONFIG.STEP;
+            }
+
+            // Atualiza o indicador de posição da rolagem
+            updateScrollIndicator() {
+                const { chatContainer, scrollIndicator } = this.elements;
+                const scrollableHeight = chatContainer.scrollHeight - chatContainer.clientHeight;
+                const scrollPercentage = (chatContainer.scrollTop / scrollableHeight) * 100;
+                const indicatorHeight = Math.min(
+                    Math.max(scrollPercentage, ChatController.SCROLL_CONFIG.INDICATOR_MIN),
+                    100
+                );
+
+                scrollIndicator.style.bottom = `${100 - indicatorHeight}%`;
+            }
+
+            // Rola para o final do chat
+            scrollToBottom() {
+                const { chatContainer } = this.elements;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            // Cria conexão WebSocket
+            createWebSocketConnection() {
+                try {
+                    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                    const ws = new WebSocket(`${protocol}192.168.4.1:81/ws`);
+
+                    ws.onopen = () => this.handleWebSocketOpen();
+                    ws.onmessage = (event) => this.handleWebSocketMessage(event);
+                    ws.onclose = (event) => this.handleWebSocketClose(event);
+                    ws.onerror = (error) => this.handleWebSocketError(error);
+
+                    return ws;
+                } catch (error) {
+                    this.addSystemMessage("Falha ao conectar. Tente novamente mais tarde.");
+                    console.error("Erro ao criar WebSocket:", error);
+                    return null;
                 }
+            }
 
-                if (el.input) {
-                    el.input.addEventListener('keypress', function (e) {
-                        if (e.key === 'Enter') sendMessage(ws);
+            // Configura eventos de entrada
+            setupInputEvents() {
+                const { sendButton, chatInput } = this.elements;
+
+                sendButton.onclick = () => this.sendMessage();
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+            }
+
+            // Método que estava ausente
+            handleWebSocketOpen() {
+                this.addSystemMessage("Conectado ao servidor!");
+            }
+
+            handleWebSocketClose(event) {
+                this.addSystemMessage(`Desconectado do servidor (código: ${event.code})!`);
+                setTimeout(() => {
+                    this.addSystemMessage("Tentando reconectar...");
+                    this.initializeChat();
+                }, 5000);
+            }
+
+            handleWebSocketError(error) {
+                this.addSystemMessage("Erro de conexão");
+                console.error("Erro de WebSocket:", error);
+            }
+
+            // Manipula mensagem WebSocket recebida
+            handleWebSocketMessage(event) {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    switch (data.type) {
+                        case 'message':
+                            this.handleNewMessage(data);
+                            break;
+                        case 'identify':
+                            this.addSystemMessage(`${data.username || 'Novo usuário'} se conectou`);
+                            break;
+                        case 'idClient':
+                            this.handleClientIdentification(data);
+                            break;
+                        case 'userCount':
+                            this.elements.userCountDisplay.textContent = data.count;
+                            break;
+                        case 'userDesconect':
+                            this.handleUserDisconnect(data);
+                            break;
+                        case 'syncRequest':
+                            this.handleSyncRequest(data);
+                            break;
+                        case 'syncResponse':
+                            this.handleSyncResponse(data);
+                            break;
+                    }
+                } catch (error) {
+                    this.addSystemMessage("Erro ao processar mensagem");
+                    console.error("Erro ao processar mensagem WebSocket:", error);
+                }
+            }
+
+            // Método que estava ausente
+            handleSyncRequest(data) {
+                if (!data.targetClientId && this.isWebSocketOpen()) {
+                    if (this.messageHistory.length > data.messageCount) {
+                        this.webSocket.send(JSON.stringify({
+                            type: 'syncResponse',
+                            targetClientId: data.clientId,
+                            history: this.messageHistory,
+                            sender: this.currentUser.name,
+                            senderId: this.currentUser.id
+                        }));
+                    }
+                }
+            }
+
+            // Método que estava ausente
+            handleSyncResponse(data) {
+                if (data.targetClientId === this.currentUser.id && data.history?.length > 0) {
+                    if (this.messageHistory.length === 0) {
+                        this.elements.chatContainer.innerHTML = '';
+                    }
+
+                    data.history.forEach(msg => {
+                        const exists = this.messageHistory.some(m =>
+                            m.id === msg.id && m.userId === msg.usuarioId
+                        );
+                        if (!exists) {
+                            const type = msg.usuarioId === this.currentUser.id ? "right-msg" : "left-msg";
+                            this.addMessage(msg.mensagem, type, msg.usuarioId, msg.data);
+                            if (msg.id > this.lastMessageId) this.lastMessageId = msg.id;
+                            this.messageHistory.push({
+                                id: msg.id,
+                                timestamp: msg.data,
+                                userId: msg.usuarioId,
+                                content: msg.mensagem
+                            });
+                        }
+                    });
+
+                    this.addSystemMessage("Histórico sincronizado!");
+                }
+            }
+
+            handleUserDisconnect(data) {
+                const user = this.getUserById(parseInt(data.content));
+                this.addSystemMessage(`${user.name} desconectou`);
+            }
+
+            // Manipula nova mensagem
+            handleNewMessage(data) {
+                const exists = this.messageHistory.some(m =>
+                    m.id === data.id && m.userId === data.senderId
+                );
+
+                if (!exists) {
+                    const messageType = data.senderId === this.currentUser.id ? "right-msg" : "left-msg";
+                    this.addMessage(data.content, messageType, data.senderId, data.timestamp);
+                    this.messageHistory.push({
+                        id: data.id || ++this.lastMessageId,
+                        timestamp: data.timestamp || this.getFormattedTime(),
+                        userId: data.senderId,
+                        content: data.content
                     });
                 }
             }
+
+            // Manipula identificação do cliente
+            handleClientIdentification(data) {
+                this.currentUser = this.getUserById(parseInt(data.content));
+                this.elements.userNameDisplay.textContent = this.currentUser.name;
+                this.elements.profileImage.classList.add(this.currentUser.avatar);
+
+                this.addSystemMessage(`Você está conectado como ${this.currentUser.name}`);
+
+                this.webSocket.send(JSON.stringify({
+                    type: 'identify',
+                    username: this.currentUser.name,
+                    clientId: this.currentUser.id
+                }));
+
+                setTimeout(() => this.requestHistorySync(), 1000);
+            }
+
+            // Adiciona mensagem ao chat
+            addMessage(content, type, userId, timestamp) {
+                const messageElement = document.createElement('div');
+                messageElement.className = `msg ${type === 'system' ? 'center-msg' : type}`;
+
+                const bubbleElement = document.createElement('div');
+                bubbleElement.className = 'msg-bubble';
+
+                const infoElement = document.createElement('div');
+                infoElement.className = 'msg-info';
+
+                const textElement = document.createElement('div');
+                textElement.className = 'msg-text';
+                textElement.textContent = content;
+
+                if (userId) {
+                    const user = this.getUserById(userId);
+                    const avatarElement = document.createElement('div');
+                    avatarElement.className = `msg-img ${user.avatar}`;
+                    messageElement.appendChild(avatarElement);
+
+                    const nameElement = document.createElement('div');
+                    nameElement.className = 'msg-info-name';
+                    nameElement.textContent = user.name;
+                    infoElement.appendChild(nameElement);
+                }
+
+                if (timestamp) {
+                    const timeElement = document.createElement('div');
+                    timeElement.className = 'msg-info-time';
+                    timeElement.textContent = timestamp;
+                    infoElement.appendChild(timeElement);
+                }
+
+                if (type === 'system') {
+                    const nameElement = document.createElement('div');
+                    nameElement.className = 'msg-info-name';
+                    nameElement.textContent = 'Sistema';
+                    infoElement.appendChild(nameElement);
+                }
+
+                bubbleElement.appendChild(infoElement);
+                bubbleElement.appendChild(textElement);
+                messageElement.appendChild(bubbleElement);
+
+                this.elements.chatContainer.appendChild(messageElement);
+                this.scrollToBottom();
+            }
+
+            // Adiciona mensagem do sistema
+            addSystemMessage(content) {
+                this.addMessage(content, 'system');
+            }
+
+            // Envia mensagem
+            sendMessage() {
+                const content = this.elements.chatInput.value.trim();
+                if (!content || !this.isWebSocketOpen()) return;
+
+                const messageId = ++this.lastMessageId;
+                const timestamp = this.getFormattedTime();
+
+                this.webSocket.send(JSON.stringify({
+                    type: 'message',
+                    sender: this.currentUser.name,
+                    content,
+                    senderId: this.currentUser.id,
+                    id: messageId,
+                    timestamp
+                }));
+
+                this.addMessage(content, "right-msg", this.currentUser.id, timestamp);
+                this.messageHistory.push({
+                    id: messageId,
+                    timestamp,
+                    userId: this.currentUser.id,
+                    content
+                });
+
+                this.elements.chatInput.value = '';
+            }
+
+            // Obtém horário formatado
+            getFormattedTime() {
+                const date = new Date();
+                return `${date.getDate().toString().padStart(2, '0')}/` +
+                    `${(date.getMonth() + 1).toString().padStart(2, '0')}/` +
+                    `${date.getFullYear()} ` +
+                    `${date.getHours().toString().padStart(2, '0')}:` +
+                    `${date.getMinutes().toString().padStart(2, '0')}`;
+            }
+
+            // Obtém usuário por ID
+            getUserById(id) {
+                return ChatController.PREDEFINED_USERS.find(user => user.id === id);
+            }
+
+            // Verifica se WebSocket está aberto
+            isWebSocketOpen() {
+                return this.webSocket && this.webSocket.readyState === WebSocket.OPEN;
+            }
+
+            // Solicita sincronização do histórico
+            requestHistorySync() {
+                if (this.isWebSocketOpen()) {
+                    this.webSocket.send(JSON.stringify({
+                        type: 'syncRequest',
+                        username: this.currentUser.name,
+                        clientId: this.currentUser.id,
+                        messageCount: this.messageHistory.length
+                    }));
+                }
+            }
         }
 
-        initChat()
-
+        document.addEventListener('DOMContentLoaded', () => new ChatController());
     </script>
 
 
