@@ -1,3 +1,4 @@
+require('./styles.css');
 const CONFIG = {
     FETCH_TIMEOUT: 5000,
     RETRY_DELAY: 1000,
