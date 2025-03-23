@@ -537,9 +537,8 @@
 
             // Cria conexão WebSocket
             createWebSocketConnection() {
-                try {
-                    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-                    const ws = new WebSocket(`${protocol}192.168.4.1:81/ws`);
+                try {                   
+                    const ws = new WebSocket(`ws://192.168.4.1:81/ws`);
 
                     ws.onopen = () => this.handleWebSocketOpen();
                     ws.onmessage = (event) => this.handleWebSocketMessage(event);
@@ -559,7 +558,7 @@
                 const { sendButton, chatInput } = this.elements;
 
                 sendButton.onclick = () => this.sendMessage();
-                chatInput.addEventListener('keypress', (e) => {
+                chatInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') this.sendMessage();
                 });
             }
@@ -813,8 +812,9 @@
                 }
             }
         }
+        new ChatController()
 
-        document.addEventListener('DOMContentLoaded', () => new ChatController());
+       // document.addEventListener('DOMContentLoaded', () => new ChatController());
     </script>
 
 

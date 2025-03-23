@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <title>ESP32 Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -13,13 +12,13 @@
             background-color: #f0f0f0;
         }
 
-        .loading {
+        .loading-message {
             text-align: center;
             padding: 20px;
             font-weight: bold;
         }
 
-        .progress {
+        .progress-container {
             width: 80%;
             height: 20px;
             background-color: #ddd;
@@ -31,203 +30,178 @@
         .progress-bar {
             height: 100%;
             background-color: #4CAF50;
-            width: 0%;
-            transition: width 0.3s;
+            width: 0;
+            transition: width 0.3s ease;
         }
     </style>
 </head>
-
 <body>
-    <div id="app">
-        <div class="loading">Carregando aplicação...</div>
-        <div class="progress">
+    <div id="app-container">
+        <div class="loading-message">Carregando aplicação...</div>
+        <div class="progress-container">
             <div id="progress-bar" class="progress-bar"></div>
         </div>
     </div>
 
     <script>
-        // Configuração
-        const totalFragments = 6; // Número total de fragmentos
-        let loadedFragments = 0;
-        let fragmentsContent = [];
+        const CONFIG = {
+            FETCH_TIMEOUT: 5000,
+            RETRY_DELAY: 1000,
+            FRAGMENT_DELAY: 300,
+            TOTAL_FRAGMENTS: 'fragments' // Será sobrescrito pelo index
+        };
 
-        // Inicializar o array de fragmentos
-        for (let i = 0; i < totalFragments; i++) {
-            fragmentsContent[i] = '';
-        }
+        class ContentLoader {
+            constructor() {
+                this.loadedFragmentsCount = 0;
+                this.fragmentsContent = [];
+                this.totalFragments = 0;
+            }
 
-        async function fetchIndexToJson() {
-            try {
-                // Fazer a requisição para o arquivo index.txt
-                const response = await fetch('fragments/index.txt');
-
-                if (!response.ok) {
+            async loadIndexFile() {
+                try {
+                    const response = await fetch('fragments/index.txt');
+                    if (!response.ok) throw new Error(`Falha ao carregar index: ${response.status}`);
+                    
+                    const text = await response.text();
+                    return this.parseIndexData(text);
+                } catch (error) {
+                    console.error('Erro ao carregar index:', error);
                     return null;
-                    throw new Error(`Erro ao carregar index.txt: ${response.status} ${response.statusText}`);
                 }
+            }
 
-                // Obter o conteúdo como texto
-                const text = await response.text();
-
-                // Converter o texto do formato "chave: valor" para um objeto JSON
-                const lines = text.split('\n').filter(line => line.trim() !== '');
+            parseIndexData(text) {
                 const indexData = {};
-
-                lines.forEach(line => {
-                    // Procura pelo primeiro caractere ":" na linha
-                    const colonIndex = line.indexOf(':');
-
-                    if (colonIndex !== -1) {
-                        // Extrai a chave e o valor
-                        const key = line.substring(0, colonIndex).trim();
-                        const value = line.substring(colonIndex + 1).trim();
-
-                        // Converte para números onde possível
-                        if (key === 'fragments' || key === 'filesize') {
-                            indexData[key] = parseInt(value, 10);
-                        } else {
-                            indexData[key] = value;
-                        }
-                    }
-                });
-
-                console.log('Index data carregado:', indexData);
+                text.split('\n')
+                    .filter(line => line.trim())
+                    .forEach(line => {
+                        const [key, value] = line.split(':').map(part => part.trim());
+                        indexData[key] = (key === 'fragments' || key === 'filesize') 
+                            ? Number(value) 
+                            : value;
+                    });
+                this.totalFragments = indexData.fragments;
+                this.fragmentsContent = new Array(this.totalFragments).fill('');
                 return indexData;
-            } catch (error) {
-                return null
-                console.error('Erro ao processar index.txt:', error);
-                throw error;
             }
-        }
-        function updateProgress() {
-            const progress = (loadedFragments / totalFragments) * 100;
-            document.getElementById('progress-bar').style.width = progress + '%';
-        }
 
-        async function loadFragment(index) {
-            try {
+            updateProgressBar() {
+                const progressPercentage = (this.loadedFragmentsCount / this.totalFragments) * 100;
+                document.getElementById('progress-bar').style.width = `${progressPercentage}%`;
+            }
+
+            async fetchFragment(index) {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos de timeout
-                const response = await fetch('/fragments/fragment_' + index, { signal: controller.signal });
-                clearTimeout(timeoutId);
+                const timeoutId = setTimeout(() => controller.abort(), CONFIG.FETCH_TIMEOUT);
 
-                if (!response.ok) {
-                    throw new Error('Erro ao carregar fragmento ' + index + ': ' + response.status);
+                try {
+                    const response = await fetch(`/fragments/fragment_${index}`, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) throw new Error(`Erro no fragmento ${index}: ${response.status}`);
+                    
+                    const text = await response.text();
+                    this.fragmentsContent[index] = text;
+                    this.loadedFragmentsCount++;
+                    this.updateProgressBar();
+                    return true;
+                } catch (error) {
+                    console.error(`Erro ao carregar fragmento ${index}:`, error);
+                    await this.delay(CONFIG.RETRY_DELAY);
+                    return this.fetchFragment(index); // Retry
                 }
-
-                const text = await response.text();
-                fragmentsContent[index] = text;
-                loadedFragments++;
-                updateProgress();
-                return true;
-            } catch (error) {
-                console.error(error);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                return await loadFragment(index);
             }
-        }
 
-        function assembleContent() {
-            const fullContent = fragmentsContent.join('');
-            const appContainer = document.getElementById('app');
+            delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
 
-            const title_load = document.querySelector('.loading');
+            assembleContent() {
+                const appContainer = document.getElementById('app-container');
+                const loadingMessage = document.querySelector('.loading-message');
+                loadingMessage.textContent = 'Iniciando o sistema...';
 
-            title_load.innerHTML = 'Iniciando o sistema...';
+                try {
+                    const fullContent = this.fragmentsContent.join('');
+                    const doc = new DOMParser().parseFromString(fullContent, 'text/html');
+                    
+                    if (!doc.body) throw new Error('Falha ao parsear HTML');
 
-            try {
-                // Criar um parser para processar o HTML
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(fullContent, "text/html");
-
-                // Verificar se o parsing foi bem-sucedido
-                if (!doc.body) {
-                    throw new Error('Erro ao parsear o conteúdo HTML');
+                    appContainer.innerHTML = '';
+                    this.appendStyles(doc);
+                    this.appendBodyContent(doc, appContainer);
+                    this.appendScripts(doc);
+                    this.forceLayoutRefresh(appContainer);
+                } catch (error) {
+                    console.error('Erro ao montar conteúdo:', error);
+                    appContainer.innerHTML = this.getErrorMessage();
                 }
+            }
 
-                // Limpar o container antes de adicionar novo conteúdo
-                appContainer.innerHTML = '';
-                // pega todos os scripts do doc antes de clonar o body
-                const scripts = doc.querySelectorAll("script");
-
-                // Clonar e adicionar os elementos do body
-                const bodyContent = doc.body;
-                Array.from(bodyContent.childNodes).forEach(node => {
-                    const clonedNode = node.cloneNode(true);
-                    appContainer.appendChild(clonedNode);
-                });
-
-                // Processar estilos
-                const styles = doc.querySelectorAll("style");
-                styles.forEach(style => {
-                    const newStyle = document.createElement("style");
-                    newStyle.textContent = style.textContent || style.innerHTML;
-                    // Adicionar atributo para identificar estilos dinâmicos
-                    newStyle.setAttribute('data-dynamic', 'true');
+            appendStyles(doc) {
+                doc.querySelectorAll('style').forEach(style => {
+                    const newStyle = document.createElement('style');
+                    newStyle.textContent = style.textContent;
+                    newStyle.dataset.dynamic = 'true';
                     document.head.appendChild(newStyle);
                 });
+            }
 
-                // Processar scripts
+            appendBodyContent(doc, container) {
+                doc.body.childNodes.forEach(node => {
+                    container.appendChild(node.cloneNode(true));
+                });
+            }
 
-                scripts.forEach(script => {
-                    const newScript = document.createElement("script");
+            appendScripts(doc) {
+                doc.querySelectorAll('script').forEach(script => {
+                    const newScript = document.createElement('script');
                     if (script.src) {
-                        // Para scripts externos
                         newScript.src = script.src;
                         newScript.async = true;
                     } else {
-                        // Para scripts inline
-                        newScript.textContent = script.textContent || script.innerHTML;
+                        newScript.textContent = script.textContent;
                     }
-                    // Adicionar atributo para identificar scripts dinâmicos
-                    newScript.setAttribute('data-dynamic', 'true');
-                    // Adicionar tratamento de erro
-                    newScript.onerror = () => console.error(`Erro ao carregar script: ${script.src || 'inline'}`);
+                    newScript.dataset.dynamic = 'true';
+                    newScript.onerror = () => console.error(`Erro no script: ${script.src || 'inline'}`);
                     document.head.appendChild(newScript);
                 });
+            }
 
-                // Forçar atualização do layout para dispositivos móveis
+            forceLayoutRefresh(container) {
                 window.dispatchEvent(new Event('resize'));
-
-                // Adicionar listener para garantir que o conteúdo esteja visível
                 setTimeout(() => {
-                    appContainer.style.display = 'none';
-                    appContainer.offsetHeight; // Forçar reflow
-                    appContainer.style.display = 'block';
+                    container.style.display = 'none';
+                    container.offsetHeight; // Force reflow
+                    container.style.display = 'block';
                 }, 100);
+            }
 
-            } catch (error) {
-                console.error('Erro ao montar conteúdo:', error);
-                // Fallback: mostrar mensagem de erro para o usuário
-                appContainer.innerHTML = `
+            getErrorMessage() {
+                return `
                     <div style="text-align: center; padding: 20px; color: #721c24;">
                         Erro ao carregar o conteúdo. Por favor, recarregue a página.
                     </div>
                 `;
             }
+
+            async loadAllFragments() {
+                const indexData = await this.loadIndexFile();
+                if (!indexData) return;
+
+                for (let i = 0; i < this.totalFragments; i++) {
+                    await this.fetchFragment(i);
+                    await this.delay(CONFIG.FRAGMENT_DELAY);
+                }
+                this.assembleContent();
+            }
         }
 
-        // Função assíncrona para carregar todos os fragmentos sequencialmente
-        async function loadAllFragments() {
-            let fragInfo  = await fetchIndexToJson();
-            if (!fragInfo) {
-                return;
-            }
-            for (let i = 0; i < fragInfo.fragments; i++) {
-                // Esperar cada fragmento carregar antes de passar para o próximo
-                await loadFragment(i);
-                await new Promise(resolve => setTimeout(resolve, 300));
-            }
-
-            // Quando todos os fragmentos forem carregados, montar o conteúdo
-            assembleContent();
-        }
-
-        // Iniciar o carregamento quando a página estiver pronta
-        window.onload = function () {
-            loadAllFragments();
-        };
+        window.addEventListener('load', () => {
+            const loader = new ContentLoader();
+            loader.loadAllFragments();
+        });
     </script>
 </body>
-
 </html>
