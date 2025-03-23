@@ -350,8 +350,6 @@ class WebServer:
                     # Determinar o arquivo a ser servido
                     if path == '/' or path == '/index.html':
                         file_path = 'loader.html'
-                    elif path == '/uploader':
-                        file_path = 'uploader.html'
                     elif path.startswith('/fragments/'):
                         # Servir fragmentos HTML
                         file_name = path.split('/')[-1]
@@ -759,13 +757,13 @@ async def main():
     ap = await setup_network()
     
     # Iniciar servidores
-    #dns_server = DNSServer(AP_IP)
+    dns_server = DNSServer(AP_IP)
     websocket_server = WebSocketServer(81)
     web_server = WebServer(80, websocket_server)  # Passando referência do WebSocket server
     
     # Executar servidores em tarefas paralelas
     await asyncio.gather(
-        #dns_server.run(),
+        dns_server.run(),
         web_server.run(),
         websocket_server.run()
     )
