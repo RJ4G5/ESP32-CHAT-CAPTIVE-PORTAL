@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <title>ESP32 Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    
+</head>
+
+<body>
+
+    <div class="root">
+        <div class="chat-body">
+            <div class="chat-header">
+                <div class="chat-header-perfil">
+                    <div class="msg-img" style="width: 33px;height: 33px;"></div>
+                    <div class="perfil-user">
+                        <span>
+                            Conectado como <strong id="user_name">---</strong>
+                        </span>
+                        <span>
+                            <userCount id="userCount">--</userCount> usuários online
+                        </span>
+                    </div>
+
+
+                </div>
+
+
+
+
+            </div>
+            <div class="control-buttons">
+                <button class="btn-control" id="scroll-up">Subir</button>
+                <div class="scroll-indicator-container">
+                    <div class="msger-chat" id="msger-chat"> </div>
+
+
+                    <div class="scroll-indicator">
+                        <div id="scroll-position" class="scroll-position"></div>
+
+                    </div>
+                </div>
+
+                <button class="btn-control" id="scroll-down">Descer</button>
+            </div>
+
+            <div class="chat-input">
+
+                <div class="chat-input-text">
+                    <textarea id="chat-input-text" placeholder="O que está acontecendo?"></textarea>
+                    <button id="sendButton">Enviar</button>
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+
+
+    </div>
+ 
+
+
+
+</body>
+
+</html>
