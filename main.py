@@ -522,6 +522,15 @@ class WebSocketServer:
         for client in self.clients:
             if client is not None:
                 self.send_message(client, count_message)
+                
+    def desconect_user(self,client):
+        indexId = self.clients.remove(client)
+        for c in self.clients:
+            if c is not None:
+                msg = '{"type":"userDesconect","content":"' + str(indexId+1) + '"}'
+                self.send_message(c, msg.encode())
+        # Atualizar contador de usuários quando alguém sai
+        self.broadcast_user_count()
     
     async def handle_websocket(self, client, addr):
         try:
@@ -616,9 +625,7 @@ class WebSocketServer:
         
         finally:
             if client in self.clients:
-                self.clients.remove(client)
-                # Atualizar contador de usuários quando alguém sai
-                self.broadcast_user_count()
+                self.desconect_user(client)
                 
             try:
                 client.close()
@@ -710,9 +717,7 @@ class WebSocketServer:
         except Exception as e:
             print(f"Erro ao enviar mensagem: {e}")
             if client in self.clients:
-                self.clients.remove(client)
-                # Atualizar contador de usuários quando há erro de envio
-                self.broadcast_user_count()
+                self.desconect_user(client)
                 try:
                     client.close()
                 except:
@@ -754,13 +759,13 @@ async def main():
     ap = await setup_network()
     
     # Iniciar servidores
-    dns_server = DNSServer(AP_IP)
+    #dns_server = DNSServer(AP_IP)
     websocket_server = WebSocketServer(81)
     web_server = WebServer(80, websocket_server)  # Passando referência do WebSocket server
     
     # Executar servidores em tarefas paralelas
     await asyncio.gather(
-        dns_server.run(),
+        #dns_server.run(),
         web_server.run(),
         websocket_server.run()
     )
