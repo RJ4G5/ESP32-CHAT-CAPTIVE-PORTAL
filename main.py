@@ -428,11 +428,59 @@ class WebServer:
                     print(f"Erro aceitando conexão: {e}")
                 await asyncio.sleep(0.01)
 
+class ListaFixa:
+    def __init__(self, tamanho):
+        # Inicializa a lista com um tamanho fixo preenchido com None
+        self.tamanho = tamanho
+        self.lista = [None] * tamanho
+
+    def add(self, elemento):
+        # Adiciona o elemento no primeiro índice vazio (None)
+        for i in range(self.tamanho):
+            if self.lista[i] is None:
+                self.lista[i] = elemento
+                return i
+        return -1  # Retorna -1 se não houver espaço disponível
+
+    def remove(self, elemento):
+        # Remove a primeira ocorrência do elemento e retorna o índice
+        for i in range(self.tamanho):
+            if self.lista[i] == elemento:
+                self.lista[i] = None
+                return i
+        return -1  # Retorna -1 se o elemento não for encontrado
+
+    def getIndice(self, elemento):
+        # Retorna o índice da primeira ocorrência do elemento
+        for i in range(self.tamanho):
+            if self.lista[i] == elemento:
+                return i
+        return -1  # Retorna -1 se o elemento não for encontrado
+    def getLength(self):
+        # Retorna a quantidade de índices preenchidos (não None)
+        contador = 0
+        for elemento in self.lista:
+            if elemento is not None:
+                contador += 1
+        return contador
+    
+    def __len__(self):
+        # Permite que len(objeto) retorne o número de elementos preenchidos
+        return self.getLength()
+
+    def __str__(self):
+        # Para facilitar a visualização da lista
+        return str(self.lista)
+
+    def __iter__(self):
+        return iter(self.lista)
+
+
 class WebSocketServer:
     def __init__(self, port=81):
         self.port = port
         self.socket = None
-        self.clients = []
+        self.clients = ListaFixa(5)
     
     def start(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -466,11 +514,14 @@ class WebSocketServer:
         """Enviar para todos os clientes o número atual de usuários conectados"""
         count_message = json.dumps({
             "type": "userCount",
-            "count": len(self.clients)
+            "count": self.clients.getLength()
         }).encode()
         
+        
+        
         for client in self.clients:
-            self.send_message(client, count_message)
+            if client is not None:
+                self.send_message(client, count_message)
     
     async def handle_websocket(self, client, addr):
         try:
@@ -521,14 +572,19 @@ class WebSocketServer:
             client.send(response)
             
             # Adicionar cliente à lista
-            self.clients.append(client)
+            indice = self.clients.add(client)
             
             # Atualizar contador de usuários para todos
             self.broadcast_user_count()
+             
+             
             
-            # Enviar mensagem de boas-vindas
-            welcome_msg = '{"type":"message","sender":"Sistema","content":"Bem-vindo ao chat!"}'
-            self.send_message(client, welcome_msg.encode())
+            
+            idClient = '{"type":"idClient","content":"' + str(indice+1) + '"}'
+            print("Cliente "+str(indice+1) )
+            #welcome_msg = '{"type":"idClient","sender":"Sistema","content":"Bem-vindo ao chat!"}'
+           
+            self.send_message(client, idClient.encode())
             
             # Processar mensagens
             buffer = b''
@@ -545,8 +601,9 @@ class WebSocketServer:
                         buffer = b''
                         # Broadcast para todos os clientes
                         for c in self.clients:
-                            if c != client:  # Não reenvie para o próprio remetente
-                                self.send_message(c, message)
+                            if c is not None:
+                                if c != client:  # Não reenvie para o próprio remetente
+                                    self.send_message(c, message)
                 
                 except OSError as e:
                     if e.args[0] == 11:  # EAGAIN/EWOULDBLOCK
