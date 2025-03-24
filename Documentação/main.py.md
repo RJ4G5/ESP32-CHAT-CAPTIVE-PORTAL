@@ -144,7 +144,13 @@ Configura o ESP32 como um ponto de acesso Wi-Fi.
 
 ---
 
-## Conclusão
 
-O código foi projetado para atender as limitações de memória do ESP32, utilizando fragmentação de arquivos, listas de conexão otimizadas e gerenciamento eficiente de sockets. Com essa arquitetura, é possível fornecer serviços de comunicação em tempo real sem comprometer a estabilidade do dispositivo.
+## Considerações Finais
+O código foi projetado com foco nas limitações do ESP32:
+
+ - **Memória**: Uso de blocos pequenos, limpeza frequente com gc.collect(), e fragmentação de arquivos.
+ - **Processamento**: Assincronia com asyncio para multitarefa eficiente.
+ - **Conexões**: Limite fixo de 5 clientes para evitar sobrecarga.
+
+Esse design permite um chat funcional em um dispositivo de baixo custo, apenas por diversão. Com essa arquitetura, é possível fornecer serviços de comunicação em tempo real sem comprometer a estabilidade do dispositivo.
 
