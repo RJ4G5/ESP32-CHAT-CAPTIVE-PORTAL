@@ -52,7 +52,7 @@ LIMIT_EXCEEDED_HTML = """<!DOCTYPE html>
 </html>
 """ % MAX_CONNECTIONS
 
-async def split_base64_content(filename, output_dir, fragment_size=FRAGMENT_SIZE):
+async def split_html_content(filename, output_dir, fragment_size=FRAGMENT_SIZE):
     """
     Lê um arquivo e divide em fragmentos menores para otimizar o uso de memória.
     
@@ -752,7 +752,7 @@ async def setup_network():
 async def main():
     # Limpar memória
     gc.collect()
-    await split_base64_content('chat.html', 'fragments', FRAGMENT_SIZE)
+    await split_html_content('chat.html', 'fragments', FRAGMENT_SIZE)
     # Configurar rede
     ap = await setup_network()
     
