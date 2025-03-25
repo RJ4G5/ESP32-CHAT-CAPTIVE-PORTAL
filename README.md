@@ -8,9 +8,9 @@ Por que não criar um chat? Um sistema fora da internet onde qualquer pessoa pud
 
 #### Colocando o plano em prática
 
-Para dar vida a essa ideia, eu precisava de um servidor HTTP e um servidor WebSocket para realizar experimentos. No entanto, as limitações do ESP32 logo se tornaram um obstáculo. Tentei de tudo: bibliotecas, ajuda de colegas, fóruns, códigos disponíveis no GitHub... Nada parecia atender às necessidades do projeto. Até mesmo ferramentas avançadas, como o ChatGPT, afirmavam que era inviável implementar a ideia no ESP32 devido às suas restrições de hardware. Confesso que fiquei desanimado, quase aceitando que era impossível.
+Para dar vida a essa ideia, eu precisava de um servidor HTTP e um servidor WebSocket para realizar experimentos. No entanto, as limitações do ESP32 logo se tornaram um obstáculo. Tentei de tudo: bibliotecas, ajuda de colegas, fóruns, códigos disponíveis no GitHub... Nada parecia atender às necessidades do projeto. Até mesmo LLMs, como o ChatGPT, afirmavam que era inviável implementar a ideia no ESP32 devido às suas restrições de hardware. Confesso que fiquei desanimado, quase aceitando que era impossível.
 
-Com o tempo, amadureci e percebi que, tudo é possível mas, nas limitações atribuidas. Foi então que me deparei com uma LLM chamada Claude.ai. Diferente das outras, ela demonstrava uma abordagem mais eficaz na construção de códigos. Isso reacendeu minha esperança.
+Com o tempo, amadureci e percebi que, tudo é possível nas limitações atribuidas. Foi então que me deparei com uma LLM chamada Claude.ai. Diferente das outras, ela demonstrava uma abordagem mais eficaz na construção de códigos. Isso reacendeu minha esperança.
 
 #### A solução
 
