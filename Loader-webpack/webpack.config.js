@@ -59,5 +59,5 @@ module.exports = {
             new CssMinimizerPlugin(), // Minifica o CSS antes de embutir
         ],
     },
-    mode: 'production',
+    mode: 'production',  //production  // development
 };

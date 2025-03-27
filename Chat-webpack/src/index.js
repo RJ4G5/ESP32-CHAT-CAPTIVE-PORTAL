@@ -1,4 +1,4 @@
- //import './styles.css';
+//import './styles.css';
 require('./styles.css');
 
 class ChatController {
@@ -9,7 +9,7 @@ class ChatController {
         INDICATOR_MIN: 12   // Altura mínima do indicador em %
     };
 
-    // Elementos DOM organizados
+      // Elementos DOM organizados
     static DOM_ELEMENTS = {
         chatContainer: 'msger-chat',
         scrollUpButton: 'scroll-up',
@@ -144,7 +144,7 @@ class ChatController {
 
     // Cria conexão WebSocket
     createWebSocketConnection() {
-        try {                   
+        try {
             const ws = new WebSocket(`ws://192.168.4.1:81/ws`);
 
             ws.onopen = () => this.handleWebSocketOpen();
@@ -239,6 +239,7 @@ class ChatController {
 
     // Método que estava ausente
     handleSyncResponse(data) {
+        console.log(data);
         if (data.targetClientId === this.currentUser.id && data.history?.length > 0) {
             if (this.messageHistory.length === 0) {
                 this.elements.chatContainer.innerHTML = '';
@@ -249,14 +250,14 @@ class ChatController {
                     m.id === msg.id && m.userId === msg.usuarioId
                 );
                 if (!exists) {
-                    const type = msg.usuarioId === this.currentUser.id ? "right-msg" : "left-msg";
-                    this.addMessage(msg.mensagem, type, msg.usuarioId, msg.data);
+                    const type = msg.userId === this.currentUser.id ? "right-msg" : "left-msg";
+                    this.addMessage(msg.content, type, msg.userId, msg.timestamp);
                     if (msg.id > this.lastMessageId) this.lastMessageId = msg.id;
                     this.messageHistory.push({
                         id: msg.id,
-                        timestamp: msg.data,
-                        userId: msg.usuarioId,
-                        content: msg.mensagem
+                        timestamp: msg.timestamp,
+                        userId: msg.userId,
+                        content: msg.content
                     });
                 }
             });
@@ -276,7 +277,7 @@ class ChatController {
             m.id === data.id && m.userId === data.senderId
         );
 
-        if (!exists) {
+        if (!exists) {          
             const messageType = data.senderId === this.currentUser.id ? "right-msg" : "left-msg";
             this.addMessage(data.content, messageType, data.senderId, data.timestamp);
             this.messageHistory.push({
@@ -321,6 +322,7 @@ class ChatController {
         textElement.textContent = content;
 
         if (userId) {
+
             const user = this.getUserById(userId);
             const avatarElement = document.createElement('div');
             avatarElement.className = `msg-img ${user.avatar}`;

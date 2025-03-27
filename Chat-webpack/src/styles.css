@@ -272,13 +272,21 @@ body {
 }
 
 .control-buttons .btn-control {
-    background: #e7e7e7;
+    background: #00796B;
+    color: #fff;
     border: 0;
     height: 44px;
     font-size: 18px;
     text-transform: uppercase;
-    touch-action: auto;
+    touch-action: inherit;
+  
 }
+.control-buttons .btn-control:active {
+    background: #e7e7e7;
+    color : #252525;
+ 
+}
+
 
 .control-buttons #scroll-up {
     box-shadow: 0px 4px 12px #4b4b4b45;
@@ -330,5 +338,5 @@ body {
 }
 .perfil-user #userCount{
     font-weight: bold;
-    margin-left: 5px;
+    margin-right: 5px;
 }
