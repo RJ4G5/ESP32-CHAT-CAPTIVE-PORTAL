@@ -72,5 +72,6 @@ Na pasta Arquivos-micropython do repositório, estão todos os arquivos já pron
 - Depois você tem que identificar a porta COM que seu ESP está conectado; no meu caso, é a porta COM5
 - No terminal você pode fazer put de cada arquivo por vez `ampy --port COM5 put main.py` ou usar um loop para agilizar `for %f in (*.py *.html) do ampy --port COM5 put %f`, a demora é de acordo com o tamanho
 - E por fim, só dar um reset pelo ampy, se não funcionar dê um reset pelo botão do ESP32
+![ampy](https://github.com/user-attachments/assets/fb561037-edbc-40c0-8233-9f2a37d55802)
 
 Recomendo o uso do Thonny IDE caso não esteja familiarizado com o MicroPython; com ele, você pode fazer tudo que precisa, até mesmo instalar o firmware mais recente.
