@@ -1,4 +1,7 @@
 ### Chat Móvel via Captive Portal com ESP32 MicroPython
+[![Watch the video](https://github.com/user-attachments/assets/c3ea037f-8a4e-458f-a4f9-13c23f854c50)](https://youtu.be/4TG6qxgADZ4)
+ 
+ 
 
 #### O início da jornada
 
