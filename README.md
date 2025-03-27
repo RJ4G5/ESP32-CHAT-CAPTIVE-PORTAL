@@ -23,21 +23,21 @@ Utilizando o Claude.ai, consegui criar um servidor HTTP combinado com um WebSock
 -  **Wi-Fi:** 802.11 b/g/n (2.4 GHz), com suporte a taxas de até 150 Mbp
 
 ### A estrada até aqui
-Foram feitos vários testes, a ponto de acreditar nos que diziam que não era possível, mas eu tinha que testar todas as possibilidades para afirmar que não seria possível. Várias otimizações foram testadas para chegar ao que estou colocando neste repositório.
+Foram realizados vários testes, a ponto de já começar a acreditar que não seria possível, mas eu tinha que testar todas as possibilidades para afirmar que não seria possível. Várias otimizações foram testadas para chegar ao que estou colocando neste repositório.
 
 #### Nos testes, foram observadas as seguintes questões:
 
 - Há perda de dados em respostas HTTP maiores que 5 KB.
-- A memória é mais limitada do que 520 KB de RAM, tendo uma memória livre de 140 KB (gc.mem_free()) antes de iniciar a aplicação.
+- A memória é mais limitada do que 520 KB de RAM, tendo uma memória livre de 140 KB `gc.mem_free()` antes de iniciar a aplicação.
 - Todo arquivo deve ser lido e processado em partes de bytes para não haver estouro de memória.
 - O ESP32 suporta até 5 conexões estáveis WebSocket
 
 
 Esses pontos foram os responsaveis pelas otimizações para que no final a aplicação funcione.
 
-Então, para tudo funcionar, primeiro a função split_html_content(filename, output_dir, fragment_size=FRAGMENT_SIZE) fragmenta o chat.html em pedaços de 5 KB e depois inicia o servidor com a página loader.html como página principal. O loader.html é o responsável por carregar cada fragmento e montá-lo no lado do cliente. Todo arquivo é lido e enviado em partes de 256 e 512 bytes para evitar estouro de memória. Podem ver mais em:
-- Documentação chat.html
-- Documentação main.py
+Então, para tudo funcionar, primeiro a função `split_html_content(filename, output_dir, fragment_size=FRAGMENT_SIZE)` fragmenta o chat.html em pedaços de 5 KB e depois inicia o servidor com a página loader.html como página principal. O loader.html é o responsável por carregar cada fragmento e montá-lo no lado do cliente. Todo arquivo é lido e enviado em partes de 256 e 512 bytes para evitar estouro de memória. Podem ver mais em:
+- [Documentação chat.html](https://github.com/RJ4G5/ESP32-CHAT-CAPTIVE-PORTAL/blob/main/Documenta%C3%A7%C3%A3o/chat.html.md)
+- [Documentação main.py](https://github.com/RJ4G5/ESP32-CHAT-CAPTIVE-PORTAL/blob/main/Documenta%C3%A7%C3%A3o/main.py.md)
 
 ### Requisitos de produção
 
@@ -63,4 +63,14 @@ mip.install("uasyncio")
 
 ```
 
-Na pasta Arquivos-micropython do repositório, estão todos os arquivos já prontos para upload no ESP32. Utilizei o Webpack para que o HTML fique bem comprimido. Fim
+Na pasta Arquivos-micropython do repositório, estão todos os arquivos já prontos para upload no ESP32. Utilizei o Webpack para que o HTML fique bem comprimido. Você pode usar o Thonny IDE ou Ampy para subir os arquivos para o esp32.
+
+#### Fazendo o upload dos arquivos no esp32(micropython) no windows com Ampy
+
+- Abra o terminal (CMD) na pasta Arquivos-MicroPython que está neste repositório
+- Instale o ampy `pip install adafruit-ampy` pelo terminal
+- Depois você tem que identificar a porta COM que seu ESP está conectado; no meu caso, é a porta COM5
+- No terminal você pode fazer put de cada arquivo por vez `ampy --port COM5 put main.py` ou usar um loop para agilizar `for %f in (*.py *.html) do ampy --port COM5 put %f`, a demora é de acordo com o tamanho
+- E por fim, só dar um reset pelo ampy, se não funcionar dê um reset pelo botão do ESP32
+
+Recomendo o uso do Thonny IDE caso não esteja familiarizado com o MicroPython; com ele, você pode fazer tudo que precisa, até mesmo instalar o firmware mais recente.
