@@ -6,7 +6,7 @@
 
 Tudo começou com uma ideia simples e um ESP32. Enquanto explorava os exemplos da IDE do Arduino, percebi que era possível criar um captive portal e carregar uma página local. Foi aí que pensei:
 
-Por que não criar um chat? Um sistema fora da internet onde qualquer pessoa pudesse se comunicar, como em um condomínio ou escola, sem precisar expor sua identidade.
+Por que não criar um chat via Captive Portal? Um sistema fora da internet onde qualquer pessoa pudesse se comunicar, como em um condomínio ou escola, sem precisar expor sua identidade.
 
 #### Colocando o plano em prática
 
